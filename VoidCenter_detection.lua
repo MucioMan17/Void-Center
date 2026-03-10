@@ -184,8 +184,61 @@ end)
 -- premium troll command signals between whitelisted scripts.
 -- OnIncomingMessage hides these messages from the chat UI.
 -- ═══════════════════════════════════════════════════════════
-local VC_PFX = "vcs"
+-- ── Word-based encoding ──────────────────────────────────────
+-- Every number 0-99 maps to a normal English word.
+-- A signal is just 4 words: ANCHOR CMD TUID TICK (+ extra words)
+-- To any player it looks like random friendly chat.
+-- Roblox filter never tags plain dictionary words.
+local WORDS = {
+    [0]="the",   [1]="and",   [2]="for",   [3]="you",   [4]="are",
+    [5]="was",   [6]="but",   [7]="not",   [8]="with",  [9]="his",
+    [10]="they", [11]="this", [12]="from", [13]="have",  [14]="one",
+    [15]="had",  [16]="her",  [17]="all",  [18]="she",  [19]="been",
+    [20]="who",  [21]="will", [22]="more", [23]="when",  [24]="can",
+    [25]="him",  [26]="your", [27]="out",  [28]="than",  [29]="now",
+    [30]="look", [31]="only", [32]="come", [33]="its",   [34]="over",
+    [35]="also", [36]="back", [37]="use",  [38]="two",   [39]="how",
+    [40]="our",  [41]="any",  [42]="day",  [43]="even",  [44]="most",
+    [45]="give", [46]="him",  [47]="new",  [48]="same",  [49]="old",
+    [50]="very", [51]="just", [52]="find", [53]="here",  [54]="way",
+    [55]="know", [56]="time", [57]="long", [58]="down",  [59]="good",
+    [60]="made", [61]="go",   [62]="my",   [63]="sound", [64]="no",
+    [65]="put",  [66]="end",  [67]="does", [68]="land",  [69]="big",
+    [70]="high", [71]="such", [72]="next", [73]="play",  [74]="small",
+    [75]="set",  [76]="try",  [77]="kind", [78]="hand",  [79]="part",
+    [80]="game", [81]="off",  [82]="keep", [83]="real",  [84]="life",
+    [85]="few",  [86]="nice", [87]="open", [88]="seem",  [89]="hard",
+    [90]="ask",  [91]="late", [92]="move", [93]="world", [94]="want",
+    [95]="left",  [96]="may", [97]="show", [98]="take",  [99]="place",
+}
+-- Reverse lookup: word -> number
+local WORD_NUM = {}
+for n,w in pairs(WORDS) do WORD_NUM[w] = n end
+
+-- Anchor word — signals always start with this
+-- Chosen to be common but still uniquely identifiable as first word
+local ANCHOR = "lol"   -- any whitelisted sender saying "lol ..." triggers parse attempt
+
 local seenSig = {}
+
+-- Encode a number 0-99999 as up to 3 words (base-100)
+local function encodeNum(n)
+    n = math.floor(n) % 100000
+    local a = math.floor(n / 10000)       -- 0-9   (tens of thousands)
+    local b = math.floor((n % 10000) / 100)  -- 0-99
+    local c2 = n % 100                        -- 0-99
+    -- pack as 3 words, a only uses 0-9 so reuse WORDS[a*10] for compactness
+    return WORDS[a] .. " " .. WORDS[b] .. " " .. WORDS[c2]
+end
+
+-- Decode 3 consecutive words back to a number
+local function decodeNum(w1, w2, w3)
+    local a = WORD_NUM[w1]
+    local b = WORD_NUM[w2]
+    local c2 = WORD_NUM[w3]
+    if not a or not b or not c2 then return nil end
+    return a * 10000 + b * 100 + c2
+end
 
 -- Hide signal messages from chat UI on ALL clients including the sender.
 -- OnIncomingMessage fires before rendering — blank Text = invisible.
@@ -193,11 +246,17 @@ local seenSig = {}
 pcall(function()
     local tcs = game:GetService("TextChatService")
 
-    local prevIncoming = tcs.OnIncomingMessage
-    tcs.OnIncomingMessage = function(msg)
+    -- Check if a message is one of our signals (starts with anchor word)
+    local function isSig(msg)
         local txt = (msg and msg.OriginalText ~= "" and msg.OriginalText)
                  or (msg and msg.Text) or ""
-        if txt:sub(1, #VC_PFX) == VC_PFX then
+        local first = txt:lower():match("^(%S+)")
+        return first == ANCHOR
+    end
+
+    local prevIncoming = tcs.OnIncomingMessage
+    tcs.OnIncomingMessage = function(msg)
+        if isSig(msg) then
             local props = Instance.new("TextChatMessageProperties")
             props.Text = ""
             return props
@@ -205,13 +264,11 @@ pcall(function()
         if prevIncoming then return prevIncoming(msg) end
     end
 
-    -- Also kill chat bubbles above heads for signal messages
+    -- Also suppress chat bubbles for signal messages
     pcall(function()
         local prevBubble = tcs.OnBubbleAdded
         tcs.OnBubbleAdded = function(msg, adornee)
-            local txt = (msg and msg.OriginalText ~= "" and msg.OriginalText)
-                     or (msg and msg.Text) or ""
-            if txt:sub(1, #VC_PFX) == VC_PFX then
+            if isSig(msg) then
                 return Instance.new("BubbleChatMessageProperties")
             end
             if prevBubble then return prevBubble(msg, adornee) end
@@ -240,11 +297,15 @@ local function SendChat(text)
     end) end
 end
 
+-- Format: ANCHOR CMD_WORD TUID(3 words) TICK(3 words) [extra...]
+-- e.g. "lol and the you are was but" — looks like chat spam to anyone
 local function SendSig(code, targetUID, extra)
-    local t   = math.floor(tick()*10) % 10000
-    local uid = (targetUID or 0) % 100000
-    local msg = VC_PFX.."_"..code.."_"..uid.."_"..t
-    if extra and extra ~= "" then msg = msg.." "..extra end
+    local uid  = (targetUID or 0) % 100000
+    local tk   = math.floor(tick() * 10) % 100000
+    -- code is 1-13, encode directly as a word (offset by 10 to avoid low indices)
+    local codeWord = WORDS[code + 10] or WORDS[code]
+    local msg = ANCHOR .. " " .. codeWord .. " " .. encodeNum(uid) .. " " .. encodeNum(tk)
+    if extra and extra ~= "" then msg = msg .. " " .. extra end
     task.spawn(SendChat, msg)
 end
 
@@ -379,26 +440,42 @@ local function HandleSig(sender, code, tuid, extra)
     end
 end
 
--- Parse incoming signal messages
+-- Parse incoming word-encoded signals
+-- Format: ANCHOR CMDWORD W1 W2 W3 W4 W5 W6 [extra...]
 local function OnSig(speaker, msg)
-    if not msg or speaker==LP then return end
-    if msg:sub(1,4) ~= VC_PFX.."_" then return end
+    if not msg or speaker == LP then return end
     -- Only handle if sender is whitelisted (prevents outsiders spoofing)
     if not IsWhitelisted(speaker) then return end
 
-    local parts  = msg:split(" ")
-    local header = parts[1]
-    local extra  = #parts>1 and table.concat(parts," ",2) or ""
-    local hp     = header:split("_")
-    local code   = tonumber(hp[2])
-    local tuid   = tonumber(hp[3])
-    local tk     = hp[4] or ""
-    if not code or not tuid then return end
+    local parts = msg:lower():split(" ")
+    -- Must start with anchor word
+    if parts[1] ~= ANCHOR then return end
+    -- Need at least 8 words: anchor + cmdword + 3(uid) + 3(tick) = 8
+    if #parts < 8 then return end
+
+    -- Decode command
+    local codeWord = parts[2]
+    local code = nil
+    for n, w in pairs(WORDS) do
+        if w == codeWord then code = n - 10 break end
+    end
+    if not code or code < 1 then return end
+
+    -- Decode uid (words 3,4,5)
+    local tuid = decodeNum(parts[3], parts[4], parts[5])
+    if not tuid then return end
+
+    -- Decode tick for dedup (words 6,7,8)
+    local tk = decodeNum(parts[6], parts[7], parts[8])
+    if not tk then return end
+
+    -- Extra data starts at word 9
+    local extra = #parts >= 9 and table.concat(parts, " ", 9) or ""
 
     local key = tostring(speaker.UserId)..":"..code..":"..tuid..":"..tk
     if seenSig[key] then return end
-    seenSig[key]=true
-    task.delay(5, function() seenSig[key]=nil end)
+    seenSig[key] = true
+    task.delay(5, function() seenSig[key] = nil end)
 
     task.spawn(HandleSig, speaker, code, tuid, extra)
 end
