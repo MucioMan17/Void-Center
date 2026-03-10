@@ -187,19 +187,36 @@ end)
 local VC_PFX = "vcs"
 local seenSig = {}
 
--- Hide our signal messages from the chat UI
+-- Hide signal messages from chat UI on ALL clients including the sender.
+-- OnIncomingMessage fires before rendering — blank Text = invisible.
+-- We check OriginalText so Roblox filtering doesn't obscure our prefix.
 pcall(function()
     local tcs = game:GetService("TextChatService")
-    local prev = tcs.OnIncomingMessage
+
+    local prevIncoming = tcs.OnIncomingMessage
     tcs.OnIncomingMessage = function(msg)
-        local txt = msg and msg.Text or ""
-        if txt:sub(1,#VC_PFX) == VC_PFX then
+        local txt = (msg and msg.OriginalText ~= "" and msg.OriginalText)
+                 or (msg and msg.Text) or ""
+        if txt:sub(1, #VC_PFX) == VC_PFX then
             local props = Instance.new("TextChatMessageProperties")
             props.Text = ""
             return props
         end
-        if prev then return prev(msg) end
+        if prevIncoming then return prevIncoming(msg) end
     end
+
+    -- Also kill chat bubbles above heads for signal messages
+    pcall(function()
+        local prevBubble = tcs.OnBubbleAdded
+        tcs.OnBubbleAdded = function(msg, adornee)
+            local txt = (msg and msg.OriginalText ~= "" and msg.OriginalText)
+                     or (msg and msg.Text) or ""
+            if txt:sub(1, #VC_PFX) == VC_PFX then
+                return Instance.new("BubbleChatMessageProperties")
+            end
+            if prevBubble then return prevBubble(msg, adornee) end
+        end
+    end)
 end)
 
 local lastSend = 0
@@ -431,4 +448,3 @@ _VC.IsVoidUser      = IsVoidUser
 _VC.IsWhitelisted   = IsWhitelisted
 _VC.SendSig         = SendSig
 _VC.tagData         = tagData
-
