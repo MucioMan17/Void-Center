@@ -35,8 +35,8 @@ local Camera = workspace.CurrentCamera
 -- ═══════════════════════════════════════════════════════════
 -- WHITELIST  ← Set your GitHub URLs here
 -- ═══════════════════════════════════════════════════════════
-local URL_FREE = ""   -- raw GitHub URL for free user list
-local URL_PREM = ""   -- raw GitHub URL for premium user list
+local URL_FREE = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/free"   -- raw GitHub URL for free user list
+local URL_PREM = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/prem"   -- raw GitHub URL for premium user list
 
 -- Local fallback lists (used if GitHub unreachable or URLs blank)
 local LOCAL_FREE = {
