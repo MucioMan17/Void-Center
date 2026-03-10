@@ -623,15 +623,13 @@ CmdInput:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 CmdInput.FocusLost:Connect(function(enter)
-    if enter then
-        local t = CmdInput.Text:match("^%s*(.-)%s*$")
-        CmdInput.Text = ""
-        ClearSuggs()
-        Dimmer.Visible   = false
-        CmdFrame.Visible = false
-        CmdOpen          = false
-        if t ~= "" then ExecCmd(t) end  -- empty enter just closes
-    end
+    local t = CmdInput.Text:match("^%s*(.-)%s*$")
+    CmdInput.Text = ""
+    ClearSuggs()
+    Dimmer.Visible   = false
+    CmdFrame.Visible = false
+    CmdOpen          = false
+    if enter and t ~= "" then ExecCmd(t) end  -- only run command if Enter was pressed
 end)
 
 -- Click outside (on dimmer) closes the bar
