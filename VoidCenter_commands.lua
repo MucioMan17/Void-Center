@@ -34,8 +34,10 @@ local SendSig          = _VC.SendSig
 
 -- FLY
 -- ═══════════════════════════════════════════════════════════
-local flyOn = false
-local flyBV, flyBG, flyConn
+local flyOn   = false
+local flyBV   = nil
+local flyBG   = nil
+local flyConn = nil
 
 local function StopFly()
     if not flyOn then return end
@@ -43,13 +45,12 @@ local function StopFly()
     Config.ActiveCmds["Fly"] = nil
     RefreshActive()
     if flyConn then flyConn:Disconnect() flyConn = nil end
-    pcall(function() if flyBV then flyBV:Destroy() end end) flyBV = nil
-    pcall(function() if flyBG then flyBG:Destroy() end end) flyBG = nil
-    local c = LP.Character
-    if c then
-        local h = c:FindFirstChildOfClass("Humanoid")
-        if h then h.PlatformStand = false end
-    end
+    pcall(function() if flyBV and flyBV.Parent then flyBV:Destroy() end end) flyBV = nil
+    pcall(function() if flyBG and flyBG.Parent then flyBG:Destroy() end end) flyBG = nil
+    pcall(function()
+        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end)
     Notify("Fly", "Landed", "info")
 end
 
@@ -58,63 +59,64 @@ local function StartFly()
     local c    = LP.Character
     local root = c and c:FindFirstChild("HumanoidRootPart")
     local hum  = c and c:FindFirstChildOfClass("Humanoid")
-    if not root or not hum then Notify("Fly","No character","error") return end
+    if not root or not hum then Notify("Fly", "No character", "error") return end
 
     flyOn = true
     Config.ActiveCmds["Fly"] = true
     RefreshActive()
     hum.PlatformStand = true
 
-    flyBV            = Instance.new("BodyVelocity")
-    flyBV.MaxForce   = Vector3.new(1e9,1e9,1e9)
-    flyBV.Velocity   = Vector3.zero
-    flyBV.Parent     = root
+    -- BodyGyro locks your character's rotation to the camera
+    flyBG             = Instance.new("BodyGyro", root)
+    flyBG.P           = 9e4
+    flyBG.MaxTorque   = Vector3.new(9e9, 9e9, 9e9)
+    flyBG.CFrame      = root.CFrame
 
-    flyBG            = Instance.new("BodyGyro")
-    flyBG.MaxTorque  = Vector3.new(1e9,1e9,1e9)
-    flyBG.P          = 1e5
-    flyBG.D          = 100
-    flyBG.CFrame     = root.CFrame
-    flyBG.Parent     = root
+    -- BodyVelocity moves you in the direction you're looking
+    flyBV             = Instance.new("BodyVelocity", root)
+    flyBV.MaxForce    = Vector3.new(9e9, 9e9, 9e9)
+    flyBV.Velocity    = Vector3.zero
 
-    flyConn = RunService.Heartbeat:Connect(function()
-        if not flyOn then return end
-        local chr  = LP.Character
+    flyConn = RunService.RenderStepped:Connect(function()
+        local chr = LP.Character
         if not chr then return end
-        local rt   = chr:FindFirstChild("HumanoidRootPart")
+        local rt  = chr:FindFirstChild("HumanoidRootPart")
         if not rt or not flyBV or not flyBV.Parent then return end
 
-        local spd   = Config.FlySpeed
-        local camCF = Camera.CFrame
-        local look  = camCF.LookVector      -- includes vertical tilt
-        local right = camCF.RightVector
-        local up    = Vector3.new(0, 1, 0)
-        local dir   = Vector3.zero
+        local cam   = workspace.CurrentCamera
+        local speed = Config.FlySpeed
+        local move  = Vector3.zero
 
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + look  end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - look  end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - right end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + right end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space)       then dir = dir + up end
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space)
+        or UserInputService:IsKeyDown(Enum.KeyCode.ButtonA) then
+            move = move + Vector3.new(0, 1, 0)
+        end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
-        or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)   then dir = dir - up end
-        if UserInputService:IsKeyDown(Enum.KeyCode.E)           then spd = spd * 2.8 end
+        or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            move = move - Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.E) then speed = speed * 2.5 end
 
-        flyBV.Velocity = dir.Magnitude > 0 and (dir.Unit * spd) or Vector3.zero
-
-        -- Yaw-only rotation: extract horizontal camera angle and apply to BodyGyro.
-        -- Using atan2 gives a clean angle without any vertical tilt bleeding in.
-        local yaw = math.atan2(-look.X, -look.Z)
-        flyBG.CFrame = CFrame.fromEulerAnglesYXZ(0, yaw, 0)
+        flyBV.Velocity = move.Magnitude > 0 and move.Unit * speed or Vector3.zero
+        flyBG.CFrame   = cam.CFrame  -- character faces where you look
     end)
-    Notify("Fly","WASD - Space/Ctrl up-down - E=boost - fly again to land","success")
+
+    Notify("Fly", "WASD to move  Space/Ctrl up-down  E to boost  fly again to land", "success")
 end
 
-Reg("fly",      {"f"},  "Toggle fly (WASD - Space/Ctrl - E=boost)", false, function() StartFly() end)
+Reg("fly",      {"f"},  "Toggle fly", false, function() StartFly() end)
 Reg("flyspeed", {"fs"}, "Set fly speed  e.g. flyspeed 80", false, function(a)
     local n = tonumber(a[1])
-    if n and n > 0 then Config.FlySpeed = n Notify("Fly","Speed -> "..n,"success")
-    else Notify("Fly","Usage: flyspeed <number>","warning") end
+    if n and n > 0 then
+        Config.FlySpeed = n
+        Notify("Fly", "Speed set to " .. n, "success")
+    else
+        Notify("Fly", "Usage: flyspeed <number>", "warning")
+    end
 end)
 
 -- ═══════════════════════════════════════════════════════════
