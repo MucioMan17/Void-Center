@@ -48,8 +48,11 @@ end
 local function MakeTag(player)
     if player == LP then return end
     local ch   = player.Character
-    local root = ch and ch:FindFirstChild("HumanoidRootPart")
-    if not ch or not root then return end
+    if not ch then return end
+    -- Use WaitForChild so we don't bail out if HRP isn't ready yet
+    local root = ch:FindFirstChild("HumanoidRootPart")
+        or ch:WaitForChild("HumanoidRootPart", 5)
+    if not root then return end
     RemoveTag(player)
 
     local info = vcUsers[player]
@@ -91,10 +94,12 @@ local function RegisterIfWhitelisted(player)
             MakeTag(player)
         end
     end
-    -- Rebuild tag when they respawn
+    -- Rebuild tag when they respawn — always reconnect, not just on first registration
     if not prev then
-        player.CharacterAdded:Connect(function()
-            task.wait(1)
+        player.CharacterAdded:Connect(function(char)
+            -- Wait for HumanoidRootPart to exist before tagging
+            char:WaitForChild("HumanoidRootPart", 10)
+            task.wait(0.5)
             if vcUsers[player] then MakeTag(player) end
         end)
     end
@@ -184,6 +189,15 @@ local function ProcessSnapshot(body)
                 if not prev or prev.premium ~= isPrem
                 or not tagData[player] or not tagData[player].Parent then
                     MakeTag(player)
+                end
+                -- Hook CharacterAdded for Firebase-discovered players
+                -- so tag rebuilds instantly on reset without waiting for next poll
+                if not prev then
+                    player.CharacterAdded:Connect(function(char)
+                        char:WaitForChild("HumanoidRootPart", 10)
+                        task.wait(0.5)
+                        if vcUsers[player] then MakeTag(player) end
+                    end)
                 end
             end
         end
