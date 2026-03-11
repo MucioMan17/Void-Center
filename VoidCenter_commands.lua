@@ -1052,6 +1052,27 @@ Reg("tp2me_info", {}, "Premium: .tp2me <player> / .tp2me <player> stop in chat",
 end)
 
 
+-- ── INFINITE JUMP ────────────────────────────────────────────
+local ijOn   = false
+local ijConn = nil
+Reg("infinitejump", {"ij"}, "Toggle infinite jump", false, function()
+    if ijOn then
+        ijOn = false
+        Config.ActiveCmds["InfJump"] = nil RefreshActive()
+        if ijConn then ijConn:Disconnect() ijConn = nil end
+        Notify("Infinite Jump", "Off", "info")
+    else
+        ijOn = true
+        Config.ActiveCmds["InfJump"] = true RefreshActive()
+        ijConn = UserInputService.JumpRequest:Connect(function()
+            if not ijOn then return end
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+        Notify("Infinite Jump", "On  —  hold Space to keep jumping", "success")
+    end
+end)
+
 -- ═══════════════════════════════════════════════════════════
 -- RESPAWN - restore all active features
 -- ═══════════════════════════════════════════════════════════
@@ -1059,6 +1080,14 @@ LP.CharacterAdded:Connect(function()
     task.wait(1)
     if flyOn      then flyOn  = false task.wait(0.2) StartFly()    end
     if ncOn       then ncOn   = false task.wait(0.1) StartNoclip() end
+    if ijOn then
+        if ijConn then ijConn:Disconnect() ijConn = nil end
+        ijConn = UserInputService.JumpRequest:Connect(function()
+            if not ijOn then return end
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
     if espOn      then
         task.wait(1.2)
         for _, p in ipairs(Players:GetPlayers()) do BuildESPFor(p) end
