@@ -91,120 +91,153 @@ local function RegisterIfWhitelisted(player)
     end
 end
 
--- ── Attribute-based detection ────────────────────────────────
--- SetAttribute replicates from LocalScript to all clients.
--- We stamp our own HRP with vc=true and vc_prem=true/false.
--- Every other script watches for that attribute on all players.
--- New joiners scan existing HRPs on load so nobody is missed.
+-- ═══════════════════════════════════════════════════════════
+-- FIREBASE DETECTION
+-- ─────────────────────────────────────────────────────────
+-- On load: POST our UserId into Firebase under this JobId.
+-- Every 10s: GET the list of UserIds in this JobId from
+-- Firebase, match against players in server, tag VC users.
+-- On leave: DELETE our entry so we don't show as online.
+-- ═══════════════════════════════════════════════════════════
 
-local VC_ATTR      = "vc"
-local VC_PREM_ATTR = "vc_prem"
+local FB_URL  = "https://voidcenter-a8d06-default-rtdb.firebaseio.com/"
+local JOB_ID  = game.JobId ~= "" and game.JobId or "studio"
+local MY_ID   = tostring(LP.UserId)
+local MY_NODE = FB_URL .. "servers/" .. JOB_ID .. "/" .. MY_ID .. ".json"
+local JOB_NODE= FB_URL .. "servers/" .. JOB_ID .. ".json"
 
--- Stamp our own HRP as soon as character exists
-local function StampSelf(character)
+-- http helper — returns body string or nil
+local function http(method, url, body)
+    local ok, res = pcall(function()
+        return game:HttpGet(url) -- fallback for GET
+    end)
+    -- Use syn.request / request / http_request depending on executor
+    local reqFn = syn and syn.request
+               or (request ~= nil and request)
+               or (http_request ~= nil and http_request)
+               or nil
+    if reqFn then
+        local ok2, res2 = pcall(reqFn, {
+            Url    = url,
+            Method = method,
+            Headers= {["Content-Type"] = "application/json"},
+            Body   = body or "",
+        })
+        if ok2 and res2 then return res2.Body end
+    elseif method == "GET" and ok then
+        return res
+    end
+    return nil
+end
+
+-- Check in: write our UserId + premium flag to Firebase
+local function CheckIn()
+    local isPrem = IsPremium() and "true" or "false"
+    local body   = '{"uid":'..MY_ID..',"prem":'..isPrem..'}'
+    http("PUT", MY_NODE, body)
+end
+
+-- Check out: remove our entry when we leave
+local function CheckOut()
+    http("DELETE", MY_NODE, "null")
+end
+
+-- Parse the Firebase response and update vcUsers + tags
+local function ProcessSnapshot(body)
+    if not body or body == "null" or body == "" then return end
+    local ok, data = pcall(function()
+        -- body is like: {"123":{"uid":123,"prem":false},"456":{"uid":456,"prem":true}}
+        -- We extract uid and prem values with pattern matching
+        local results = {}
+        for uid, prem in body:gmatch('"uid":(%d+),"prem":(%a+)') do
+            results[tonumber(uid)] = (prem == "true")
+        end
+        -- Also try reversed order just in case Firebase reorders keys
+        for prem, uid in body:gmatch('"prem":(%a+),"uid":(%d+)') do
+            results[tonumber(uid)] = (prem == "true")
+        end
+        return results
+    end)
+    if not ok or not data then return end
+
+    -- Track who we saw this poll so we can remove stale users
+    local seen = {}
+
+    for uid, isPrem in pairs(data) do
+        local uid_n = tonumber(uid)
+        if uid_n ~= LP.UserId then
+            -- Find the player in the server
+            local player = Players:GetPlayerByUserId(uid_n)
+            if player then
+                seen[player] = true
+                local prev = vcUsers[player]
+                vcUsers[player] = { premium = isPrem }
+                if not prev or prev.premium ~= isPrem
+                or not tagData[player] or not tagData[player].Parent then
+                    MakeTag(player)
+                end
+            end
+        end
+    end
+
+    -- Remove users who are no longer in Firebase (left the game)
+    for p in pairs(vcUsers) do
+        if not seen[p] then
+            RemoveTag(p)
+            vcUsers[p] = nil
+        end
+    end
+end
+
+-- Poll Firebase every 10 seconds
+local function StartPolling()
     task.spawn(function()
-        local root = character:WaitForChild("HumanoidRootPart", 10)
-        if not root then return end
-        root:SetAttribute(VC_ATTR,      true)
-        root:SetAttribute(VC_PREM_ATTR, IsPremium())
+        while true do
+            task.wait(10)
+            local body = http("GET", JOB_NODE, nil)
+            ProcessSnapshot(body)
+        end
     end)
 end
 
-if LP.Character then StampSelf(LP.Character) end
-LP.CharacterAdded:Connect(StampSelf)
-
--- Register another player from their HRP attributes
-local function TryRegister(player)
-    if player == LP then return end
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    if not root:GetAttribute(VC_ATTR) then return end
-
-    local isPrem = root:GetAttribute(VC_PREM_ATTR) == true
-    local prev   = vcUsers[player]
-    vcUsers[player] = { premium = isPrem }
-
-    if not prev or prev.premium ~= isPrem
-    or not tagData[player] or not tagData[player].Parent then
-        MakeTag(player)
-    end
-
-    -- Watch for tier changes (e.g. if they reload as premium)
-    if not prev then
-        root:GetAttributeChangedSignal(VC_PREM_ATTR):Connect(function()
-            if vcUsers[player] then
-                vcUsers[player].premium = root:GetAttribute(VC_PREM_ATTR) == true
-                MakeTag(player)
-            end
-        end)
-        player.CharacterAdded:Connect(function(char)
-            task.spawn(function()
-                local r2 = char:WaitForChild("HumanoidRootPart", 10)
-                if not r2 then return end
-                -- Wait for stamp to replicate
-                local t = 0
-                while not r2:GetAttribute(VC_ATTR) and t < 5 do
-                    task.wait(0.2) t = t + 0.2
-                end
-                if r2:GetAttribute(VC_ATTR) then
-                    vcUsers[player] = { premium = r2:GetAttribute(VC_PREM_ATTR) == true }
-                    MakeTag(player)
-                end
-            end)
-        end)
-    end
+-- Also do an immediate poll on load to catch existing users
+local function InitialPoll()
+    task.spawn(function()
+        task.wait(2)  -- wait for our own check-in to land first
+        local body = http("GET", JOB_NODE, nil)
+        ProcessSnapshot(body)
+    end)
 end
 
--- Watch a player's HRP for the vc attribute appearing
-local function WatchForStamp(player)
-    if player == LP then return end
-    local function onChar(char)
-        task.spawn(function()
-            local root = char:WaitForChild("HumanoidRootPart", 10)
-            if not root then return end
-            -- Check immediately in case stamp already applied
-            if root:GetAttribute(VC_ATTR) then
-                TryRegister(player) return
-            end
-            -- Otherwise wait for it
-            local conn
-            conn = root:GetAttributeChangedSignal(VC_ATTR):Connect(function()
-                if root:GetAttribute(VC_ATTR) then
-                    conn:Disconnect()
-                    TryRegister(player)
-                end
-            end)
-            -- Timeout after 8s — not a VC user
-            task.delay(8, function()
-                if conn then pcall(function() conn:Disconnect() end) end
-            end)
-        end)
-    end
-    if player.Character then onChar(player.Character) end
-    player.CharacterAdded:Connect(onChar)
-end
-
--- Scan everyone already in the server
-for _, p in ipairs(Players:GetPlayers()) do
-    WatchForStamp(p)
-end
-
--- Watch new joiners
-Players.PlayerAdded:Connect(WatchForStamp)
-
-Players.PlayerRemoving:Connect(function(p)
-    RemoveTag(p)
-    vcUsers[p] = nil
+-- Clean up when we leave
+game:BindToClose(function()
+    pcall(CheckOut)
+end)
+Players.LocalPlayer.AncestryChanged:Connect(function()
+    pcall(CheckOut)
 end)
 
--- Rebuild our view of all tags after we respawn
+-- Start everything
+CheckIn()
+InitialPoll()
+StartPolling()
+
+-- Re-check-in after respawn so our entry stays fresh
 LP.CharacterAdded:Connect(function()
-    task.wait(1.5)
+    task.wait(1)
+    CheckIn()
+    -- Rebuild tags we already know about
+    task.wait(0.5)
     for p in pairs(vcUsers) do
         if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             MakeTag(p)
         end
     end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    RemoveTag(p)
+    vcUsers[p] = nil
 end)
 
 -- ═══════════════════════════════════════════════════════════
