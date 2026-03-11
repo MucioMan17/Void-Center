@@ -72,6 +72,12 @@ end
 LoadList(URL_PREM, LOCAL_PREM, premIds)
 LoadList(URL_FREE, LOCAL_FREE, freeIds)
 
+-- Debug: print how many IDs loaded so you can verify in executor console
+local freeCt, premCt = 0, 0
+for _ in pairs(freeIds) do freeCt = freeCt + 1 end
+for _ in pairs(premIds) do premCt = premCt + 1 end
+warn("[VoidCenter] MyId="..tostring(LP.UserId).." | Free loaded="..freeCt.." | Prem loaded="..premCt)
+
 -- ── Whitelist gate - stop the script if user isn't whitelisted ──
 local myId = LP.UserId
 if not premIds[myId] and not freeIds[myId] then
