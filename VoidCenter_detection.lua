@@ -210,10 +210,7 @@ local function InitialPoll()
 end
 
 -- Clean up when we leave
-game:BindToClose(function()
-    pcall(CheckOut)
-end)
-Players.LocalPlayer.AncestryChanged:Connect(function()
+game:GetService("Players").LocalPlayer.AncestryChanged:Connect(function()
     pcall(CheckOut)
 end)
 
