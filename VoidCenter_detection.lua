@@ -5,12 +5,7 @@ local Players        = _VC.Players
 local RunService     = _VC.RunService
 local Debris         = _VC.Debris
 local C              = _VC.C
-local TF             = _VC.TF
-local TM             = _VC.TM
 local N              = _VC.N
-local Tween          = _VC.Tween
-local Corner         = _VC.Corner
-local Stroke         = _VC.Stroke
 local Config         = _VC.Config
 local IsPremium      = _VC.IsPremium
 local freeIds        = _VC.freeIds
@@ -53,74 +48,22 @@ end
 local function MakeTag(player)
     if player == LP then return end
     local ch   = player.Character
-    local root = ch and ch:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    if not ch then return end
     RemoveTag(player)
 
     local info = vcUsers[player]
     local prem = info and info.premium == true
-    local acC  = prem and C.Gold or C.AcctBr
 
-    -- Small pill tag — just a dot + username, sits just above the head
-    local bill = Instance.new("BillboardGui")
-    bill.Name                  = "VTag_"..player.Name
-    bill.Size                  = UDim2.new(0, 120, 0, 20)
-    bill.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
-    bill.AlwaysOnTop           = true
-    bill.LightInfluence        = 0
-    bill.MaxDistance           = 0
-    bill.Parent                = root
+    -- Use a Highlight — works at any distance, through walls, no culling
+    local hl = Instance.new("Highlight")
+    hl.Name                = "VTag_"..player.Name
+    hl.FillTransparency    = 1          -- no fill, outline only so it doesn't clash with ESP
+    hl.OutlineTransparency = 0
+    hl.OutlineColor        = prem and C.Gold or C.AcctBr
+    hl.Adornee             = ch
+    hl.Parent              = ch
 
-    -- Pill background — very subtle, semi-transparent
-    local bg = N("Frame", {
-        BackgroundColor3    = Color3.fromRGB(8, 0, 18),
-        BackgroundTransparency = 0.35,
-        BorderSizePixel     = 0,
-        Size                = UDim2.new(1, 0, 1, 0),
-    }, bill)
-    Corner(10, bg)
-    Stroke(acC, 1, bg)
-
-    -- Dot indicator (filled circle, tier color)
-    N("Frame", {
-        BackgroundColor3 = acC,
-        BorderSizePixel  = 0,
-        AnchorPoint      = Vector2.new(0, 0.5),
-        Position         = UDim2.new(0, 6, 0.5, 0),
-        Size             = UDim2.new(0, 6, 0, 6),
-    }, bg)
-    Corner(4, bg:FindFirstChildOfClass("Frame"))
-
-    -- Username only — clean and minimal
-    N("TextLabel", {
-        BackgroundTransparency = 1,
-        Position  = UDim2.new(0, 17, 0, 0),
-        Size      = UDim2.new(1, -20, 1, 0),
-        Font      = Enum.Font.GothamBold,
-        Text      = player.Name,
-        TextColor3 = acC,
-        TextSize  = 10,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate   = Enum.TextTruncate.AtEnd,
-    }, bg)
-
-    -- Click to teleport
-    local btn = N("TextButton", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Text = "", ZIndex = 5,
-    }, bg)
-    btn.MouseButton1Click:Connect(function()
-        local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        local tr = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if mr and tr then
-            mr.CFrame = tr.CFrame + Vector3.new(0, 0, 3.5)
-            Notify("Tag", "Teleported to "..player.DisplayName, "success")
-        end
-    end)
-    btn.MouseEnter:Connect(function() Tween(bg, TF, {BackgroundTransparency = 0.1}) end)
-    btn.MouseLeave:Connect(function() Tween(bg, TF, {BackgroundTransparency = 0.35}) end)
-    tagData[player] = bill
+    tagData[player] = hl
 end
 
 -- Register a player as a VC user based on whitelist tier
