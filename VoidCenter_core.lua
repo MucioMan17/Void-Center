@@ -35,8 +35,8 @@ local Camera = workspace.CurrentCamera
 -- ═══════════════════════════════════════════════════════════
 -- WHITELIST  ← Set your GitHub URLs here
 -- ═══════════════════════════════════════════════════════════
-local URL_FREE = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/free"   -- raw GitHub URL for free user list
-local URL_PREM = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/prem"   -- raw GitHub URL for premium user list
+local URL_FREE = ""   -- raw GitHub URL for free user list
+local URL_PREM = ""   -- raw GitHub URL for premium user list
 
 -- Local fallback lists (used if GitHub unreachable or URLs blank)
 local LOCAL_FREE = {
@@ -333,22 +333,113 @@ local function Notify(title, body, kind, dur)
 end
 
 -- ═══════════════════════════════════════════════════════════
--- HUD WIDGET  (draggable pill, top-left)
+-- HUD WIDGET  (draggable pill, auto-resizes to content)
 -- ═══════════════════════════════════════════════════════════
--- Base width is 280px; expands right when active commands show
-local PANEL_BASE_W = 280
+-- Uses AutomaticSize so every section is exactly as wide as
+-- its text — nothing ever gets cut off.
+-- ═══════════════════════════════════════════════════════════
+
+-- Outer frame: height fixed at 28, width grows automatically
 local Panel = N("Frame", {
-    Name             = "VCHud",
-    BackgroundColor3 = C.Panel,
+    Name                   = "VCHud",
+    BackgroundColor3       = C.Panel,
     BackgroundTransparency = 0.12,
-    BorderSizePixel  = 0,
-    Position         = UDim2.new(0, 8, 0, 8),
-    Size             = UDim2.new(0, PANEL_BASE_W, 0, 28),
-    ZIndex           = 200,
-    Active           = true,
+    BorderSizePixel        = 0,
+    Position               = UDim2.new(0, 8, 0, 8),
+    Size                   = UDim2.new(0, 0, 0, 28),  -- width driven by AutomaticSize
+    AutomaticSize          = Enum.AutomaticSize.X,
+    ZIndex                 = 200,
+    Active                 = true,
 }, Screen)
 Corner(8, Panel)
 Stroke(C.Accent, 1, Panel)
+
+-- Horizontal list layout — each child sits side by side
+local PList = N("UIListLayout", {
+    FillDirection  = Enum.FillDirection.Horizontal,
+    SortOrder      = Enum.SortOrder.LayoutOrder,
+    VerticalAlignment = Enum.VerticalAlignment.Center,
+    Padding        = UDim.new(0, 0),
+}, Panel)
+
+-- Helper: one section (label that auto-sizes to its text)
+local function PSection(text, color, bold, order)
+    local f = N("Frame", {
+        BackgroundTransparency = 1,
+        Size           = UDim2.new(0, 0, 1, 0),
+        AutomaticSize  = Enum.AutomaticSize.X,
+        LayoutOrder    = order,
+        ZIndex         = 201,
+    }, Panel)
+    local lbl = N("TextLabel", {
+        BackgroundTransparency = 1,
+        Size          = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Font          = bold and Enum.Font.GothamBold or Enum.Font.Gotham,
+        Text          = text,
+        TextColor3    = color or C.TextDim,
+        TextSize      = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex        = 202,
+    }, f)
+    -- Padding inside each section
+    N("UIPadding", {
+        PaddingLeft  = UDim.new(0, 8),
+        PaddingRight = UDim.new(0, 8),
+    }, f)
+    return lbl
+end
+
+-- Helper: thin vertical divider between sections
+local function PDivider(order)
+    N("Frame", {
+        BackgroundColor3       = C.Accent,
+        BackgroundTransparency = 0.55,
+        BorderSizePixel        = 0,
+        Size                   = UDim2.new(0, 1, 0.7, 0),
+        LayoutOrder            = order,
+        ZIndex                 = 202,
+    }, Panel)
+end
+
+--  VOID CENTER  |  FPS  |  PING  |  TIER  [|  active...]
+PSection("VOID CENTER", C.AcctBr, true, 1)
+PDivider(2)
+local LblFPS  = PSection("FPS --",  C.TextDim, false, 3)
+PDivider(4)
+local LblPing = PSection("-- ms",   C.TextDim, false, 5)
+PDivider(6)
+local LblTier = PSection(
+    IsPremium() and "PREMIUM" or "FREE",
+    IsPremium() and C.Gold    or C.AcctDk,
+    true, 7)
+
+-- Active commands section — hidden when nothing is active
+local DivActive = N("Frame", {
+    BackgroundColor3       = C.Accent,
+    BackgroundTransparency = 0.55,
+    BorderSizePixel        = 0,
+    Size                   = UDim2.new(0, 1, 0.7, 0),
+    LayoutOrder            = 8,
+    ZIndex                 = 202,
+    Visible                = false,
+}, Panel)
+local LblActive = N("TextLabel", {
+    BackgroundTransparency = 1,
+    Size          = UDim2.new(0, 0, 1, 0),
+    AutomaticSize = Enum.AutomaticSize.X,
+    Font          = Enum.Font.Gotham,
+    Text          = "",
+    TextColor3    = C.AcctBr,
+    TextSize      = 11,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    LayoutOrder   = 9,
+    ZIndex        = 202,
+}, Panel)
+N("UIPadding", {
+    PaddingLeft  = UDim.new(0, 8),
+    PaddingRight = UDim.new(0, 8),
+}, LblActive)
 
 -- Drag
 local dragging, dragStart, startPos
@@ -369,55 +460,12 @@ UserInputService.InputChanged:Connect(function(inp)
     if inp.UserInputType ~= Enum.UserInputType.MouseMovement
     and inp.UserInputType ~= Enum.UserInputType.Touch then return end
     local d = inp.Position - dragStart
-    Panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
-                                startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    Panel.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + d.X,
+        startPos.Y.Scale, startPos.Y.Offset + d.Y)
 end)
 
--- Fixed-position labels inside the panel (no UIListLayout - avoids AutomaticSize bugs)
-local function PLbl(txt, x, w, col, bold)
-    return N("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, x, 0, 0), Size = UDim2.new(0, w, 1, 0),
-        Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham,
-        Text = txt, TextColor3 = col or C.TextDim, TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 202,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-    }, Panel)
-end
-local function PVDiv(x)
-    N("Frame", {
-        BackgroundColor3 = C.Accent, BackgroundTransparency = 0.55, BorderSizePixel = 0,
-        Position = UDim2.new(0, x, 0.15, 0), Size = UDim2.new(0, 1, 0.7, 0), ZIndex = 202,
-    }, Panel)
-end
-
--- ⬡  VOID CENTER  |  FPS  |  PING  |  TIER  [|  active...]
-PLbl("VOID CENTER", 8, 110, C.AcctBr, true)
-PVDiv(121)
-local LblFPS  = PLbl("FPS --", 128, 56, C.TextDim, false)
-PVDiv(187)
-local LblPing = PLbl("-- ms", 194, 50, C.TextDim, false)
-PVDiv(247)
-local LblTier = PLbl(
-    IsPremium() and "PREM *" or "FREE",
-    254, 26,
-    IsPremium() and C.Gold or C.AcctDk, true)
--- Active section: only visible when commands are on
-local PVDivActive = N("Frame", {
-    BackgroundColor3 = C.Accent, BackgroundTransparency = 0.55, BorderSizePixel = 0,
-    Position = UDim2.new(0, PANEL_BASE_W, 0.15, 0), Size = UDim2.new(0, 1, 0.7, 0),
-    ZIndex = 202, Visible = false,
-}, Panel)
-local LblActive = N("TextLabel", {
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0, PANEL_BASE_W + 6, 0, 0),
-    Size     = UDim2.new(0, 0, 1, 0),   -- width set dynamically
-    Font = Enum.Font.Gotham, Text = "",
-    TextColor3 = C.AcctBr, TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 202,
-    TextTruncate = Enum.TextTruncate.AtEnd,
-}, Panel)
-
+-- FPS counter
 local fpsBuf = {}
 RunService.Heartbeat:Connect(function(dt)
     table.insert(fpsBuf, dt)
@@ -429,6 +477,7 @@ RunService.Heartbeat:Connect(function(dt)
     LblFPS.TextColor3 = fps >= 50 and C.Green or (fps >= 30 and C.Yellow or C.Red)
 end)
 
+-- Ping counter
 task.spawn(function()
     while task.wait(3) do
         pcall(function()
@@ -439,24 +488,17 @@ task.spawn(function()
     end
 end)
 
+-- Active commands display — shows/hides the extra section
 local function RefreshActive()
     local list = {}
     for k in pairs(Config.ActiveCmds) do table.insert(list, k) end
     table.sort(list)
     if #list == 0 then
-        LblActive.Text          = ""
-        LblActive.Size          = UDim2.new(0, 0, 1, 0)
-        PVDivActive.Visible     = false
-        Panel.Size              = UDim2.new(0, PANEL_BASE_W, 0, 28)
+        LblActive.Text      = ""
+        DivActive.Visible   = false
     else
-        local txt = table.concat(list, " | ")
-        LblActive.Text          = txt
-        -- Estimate text width: ~7px per character at size 11
-        local tw = math.max(60, #txt * 7 + 12)
-        LblActive.Size          = UDim2.new(0, tw, 1, 0)
-        PVDivActive.Position    = UDim2.new(0, PANEL_BASE_W - 1, 0.15, 0)
-        PVDivActive.Visible     = true
-        Panel.Size              = UDim2.new(0, PANEL_BASE_W + tw + 6, 0, 28)
+        LblActive.Text      = table.concat(list, "  |  ")
+        DivActive.Visible   = true
     end
 end
 
