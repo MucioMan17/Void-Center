@@ -60,68 +60,66 @@ local function MakeTag(player)
     local info = vcUsers[player]
     local prem = info and info.premium == true
     local acC  = prem and C.Gold or C.AcctBr
-    local bgC  = prem and Color3.fromRGB(38,16,0) or Color3.fromRGB(14,0,30)
 
+    -- Small pill tag — just a dot + username, sits just above the head
     local bill = Instance.new("BillboardGui")
-    bill.Name           = "VTag_"..player.Name
-    -- Fixed pixel size so it always renders. SizeOffset keeps it readable.
-    bill.Size           = UDim2.new(0, 180, 0, 42)
-    bill.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
-    bill.AlwaysOnTop    = true
-    bill.LightInfluence = 0
-    bill.MaxDistance    = 70
-    bill.Parent         = root
+    bill.Name                  = "VTag_"..player.Name
+    bill.Size                  = UDim2.new(0, 120, 0, 20)
+    bill.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
+    bill.AlwaysOnTop           = true
+    bill.LightInfluence        = 0
+    bill.MaxDistance           = 60
+    bill.Parent                = root
 
-    -- Background
+    -- Pill background — very subtle, semi-transparent
     local bg = N("Frame", {
-        BackgroundColor3 = bgC, BackgroundTransparency = 0.1,
-        BorderSizePixel = 0, Size = UDim2.new(1,0,1,0),
+        BackgroundColor3    = Color3.fromRGB(8, 0, 18),
+        BackgroundTransparency = 0.35,
+        BorderSizePixel     = 0,
+        Size                = UDim2.new(1, 0, 1, 0),
     }, bill)
-    Corner(8, bg)
+    Corner(10, bg)
     Stroke(acC, 1, bg)
 
-    -- Left accent stripe
+    -- Dot indicator (filled circle, tier color)
     N("Frame", {
-        BackgroundColor3 = acC, BorderSizePixel = 0,
-        Size = UDim2.new(0, 3, 1, 0),
+        BackgroundColor3 = acC,
+        BorderSizePixel  = 0,
+        AnchorPoint      = Vector2.new(0, 0.5),
+        Position         = UDim2.new(0, 6, 0.5, 0),
+        Size             = UDim2.new(0, 6, 0, 6),
     }, bg)
+    Corner(4, bg:FindFirstChildOfClass("Frame"))
 
-    -- Tier label (top row)
-    local tierTxt = prem and "PREMIUM" or "FREE"
+    -- Username only — clean and minimal
     N("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 9, 0, 3), Size = UDim2.new(1, -12, 0, 16),
-        Font = Enum.Font.GothamBold,
-        Text = tierTxt,
-        TextColor3 = acC, TextSize = 10,
+        Position  = UDim2.new(0, 17, 0, 0),
+        Size      = UDim2.new(1, -20, 1, 0),
+        Font      = Enum.Font.GothamBold,
+        Text      = player.Name,
+        TextColor3 = acC,
+        TextSize  = 10,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate   = Enum.TextTruncate.AtEnd,
     }, bg)
 
-    -- Display name (bottom row)
-    N("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 9, 0, 21), Size = UDim2.new(1, -12, 0, 16),
-        Font = Enum.Font.Gotham,
-        Text = player.DisplayName .. "  (@" .. player.Name .. ")",
-        TextColor3 = Color3.fromRGB(210, 195, 240), TextSize = 10,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-    }, bg)
-
-    -- Invisible click button for TP
+    -- Click to teleport
     local btn = N("TextButton", {
-        BackgroundTransparency = 1, Size = UDim2.new(1,0,1,0), Text = "", ZIndex = 5,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Text = "", ZIndex = 5,
     }, bg)
     btn.MouseButton1Click:Connect(function()
         local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         local tr = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if mr and tr then
-            mr.CFrame = tr.CFrame + Vector3.new(0,0,3.5)
+            mr.CFrame = tr.CFrame + Vector3.new(0, 0, 3.5)
             Notify("Tag", "Teleported to "..player.DisplayName, "success")
         end
     end)
-    btn.MouseEnter:Connect(function() Tween(bg, TF, {BackgroundTransparency=0}) end)
-    btn.MouseLeave:Connect(function() Tween(bg, TF, {BackgroundTransparency=0.1}) end)
+    btn.MouseEnter:Connect(function() Tween(bg, TF, {BackgroundTransparency = 0.1}) end)
+    btn.MouseLeave:Connect(function() Tween(bg, TF, {BackgroundTransparency = 0.35}) end)
     tagData[player] = bill
 end
 
