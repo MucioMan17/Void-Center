@@ -533,22 +533,17 @@ local function OnChat(speaker, msg)
     end
 end
 
--- ── Hook chat for all whitelisted premium players ──────────────
+-- ── Hook chat for dot-commands ───────────────────────────────
+-- Use ONLY ONE chat system to avoid double-firing.
+-- Try TextChatService first (new), fall back to Chatted (legacy).
 local function WatchPlayer(player)
-    if not premIds[player.UserId] then return end  -- only watch premium players
+    if not premIds[player.UserId] then return end
     player.Chatted:Connect(function(msg)
         task.spawn(OnChat, player, msg)
     end)
 end
 
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LP then WatchPlayer(p) end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LP then WatchPlayer(p) end
-end)
-
--- Also hook TextChatService MessageReceived for new chat system
+local hookedNew = false
 pcall(function()
     local tcs = game:GetService("TextChatService")
     if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
@@ -557,11 +552,23 @@ pcall(function()
             if not src then return end
             local p = Players:GetPlayerByUserId(src.UserId)
             if not p or p == LP then return end
+            if not premIds[p.UserId] then return end
             local raw = (msg.OriginalText ~= "") and msg.OriginalText or msg.Text
             task.spawn(OnChat, p, raw)
         end)
+        hookedNew = true
     end
 end)
+
+-- Only use legacy Chatted if TextChatService hook didn't work
+if not hookedNew then
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then WatchPlayer(p) end
+    end
+    Players.PlayerAdded:Connect(function(p)
+        if p ~= LP then WatchPlayer(p) end
+    end)
+end
 
 
 -- =========================================================
