@@ -254,7 +254,6 @@ local function HandleDotCmd(sender, cmd, targetName, extra)
         Notify("Signal","Control released","info",3)
 
     elseif cmd == "chat" then
-        -- .chat Player1 hello world
         if not extra or extra == "" then return end
         local sent = false
         if not sent then pcall(function()
@@ -269,6 +268,79 @@ local function HandleDotCmd(sender, cmd, targetName, extra)
             local sr2 = ev and ev:FindFirstChild("SayMessageRequest")
             if sr2 then sr2:FireServer(extra, "All") end
         end) end
+
+    elseif cmd == "spin" then
+        gc() if not r then return end
+        local bav = Instance.new("BodyAngularVelocity")
+        bav.MaxTorque = Vector3.new(0, 9e9, 0)
+        bav.AngularVelocity = Vector3.new(0, 80, 0)
+        bav.Parent = r
+        Debris:AddItem(bav, 3)
+        Notify("Signal", "Spun by "..sender.DisplayName, "warning", 3)
+
+    elseif cmd == "explode" then
+        gc() if not r then return end
+        local dirs = {
+            Vector3.new(1,1,0), Vector3.new(-1,1,0),
+            Vector3.new(0,1,1), Vector3.new(0,1,-1),
+            Vector3.new(1,1,1), Vector3.new(-1,1,-1),
+        }
+        for _, dir in ipairs(dirs) do
+            local bv = Instance.new("BodyVelocity")
+            bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bv.Velocity = dir.Unit * 120
+            bv.Parent = r
+            Debris:AddItem(bv, 0.12)
+        end
+        Notify("Signal", "Exploded by "..sender.DisplayName, "error", 3)
+
+    elseif cmd == "follow" then
+        -- Start a loop that walks us toward the sender every 0.1s
+        if Config.ActiveCmds["Followed"] then return end
+        Config.ActiveCmds["Followed"] = true
+        RefreshActive()
+        Notify("Signal", "Forced to follow "..sender.DisplayName, "warning", 4)
+        task.spawn(function()
+            while Config.ActiveCmds["Followed"] do
+                pcall(function()
+                    gc()
+                    local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and sr and r then
+                        hum:MoveTo(sr.Position)
+                    end
+                end)
+                task.wait(0.1)
+            end
+        end)
+
+    elseif cmd == "unfollow" then
+        Config.ActiveCmds["Followed"] = nil
+        RefreshActive()
+        Notify("Signal", "Follow stopped", "info", 3)
+
+    elseif cmd == "tp2me" then
+        -- Teleport us to sender on a loop
+        if Config.ActiveCmds["TP2Me"] then return end
+        Config.ActiveCmds["TP2Me"] = true
+        RefreshActive()
+        Notify("Signal", "TP'd to "..sender.DisplayName, "warning", 4)
+        task.spawn(function()
+            while Config.ActiveCmds["TP2Me"] do
+                pcall(function()
+                    gc()
+                    local sr = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
+                    if r and sr then
+                        r.CFrame = sr.CFrame * CFrame.new(math.random(-3,3), 0, math.random(-3,3))
+                    end
+                end)
+                task.wait(0.5)
+            end
+        end)
+
+    elseif cmd == "untp2me" then
+        Config.ActiveCmds["TP2Me"] = nil
+        RefreshActive()
+        Notify("Signal", "TP loop stopped", "info", 3)
     end
 end
 
