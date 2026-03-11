@@ -200,8 +200,14 @@ local function HandleDotCmd(sender, cmd, targetName, extra)
     if IsPremium() then return end
     -- Command must be targeting us (by name or display name)
     if targetName then
-        local tn = targetName:lower()
-        if tn ~= LP.Name:lower() and tn ~= LP.DisplayName:lower() then return end
+        local tn   = targetName:lower()
+        local name = LP.Name:lower()
+        local disp = LP.DisplayName:lower()
+        -- exact match first, then partial — same priority as FindPlayer
+        local match = (name == tn or disp == tn)
+                   or (name:find(tn, 1, true) ~= nil)
+                   or (disp:find(tn, 1, true) ~= nil)
+        if not match then return end
     end
 
     local c, r, hum
