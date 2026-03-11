@@ -35,24 +35,20 @@ local Camera = workspace.CurrentCamera
 -- ═══════════════════════════════════════════════════════════
 -- WHITELIST  ← Set your GitHub URLs here
 -- ═══════════════════════════════════════════════════════════
-local URL_FREE = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/free"   -- raw GitHub URL for free user list
-local URL_PREM = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/prem"   -- raw GitHub URL for premium user list
-
--- Local fallback lists (used if GitHub unreachable or URLs blank)
-local LOCAL_FREE = {
-    -- 123456789,
-}
+local URL_PREM = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/prem"
+-- Premium user list — only these users get troll commands
 local LOCAL_PREM = {
     -- 123456789,
 }
 
--- These tables are populated on startup
+-- freeIds is unused now — everyone can run the script
+-- premIds controls who gets premium tier
 local freeIds = {}
 local premIds = {}
 
-local function LoadList(url, localList, targetTable)
+local function LoadPrem(url, localList)
     for _, id in ipairs(localList) do
-        targetTable[id] = true
+        premIds[id] = true
     end
     if url and url ~= "" then
         local ok, result = pcall(function()
@@ -61,47 +57,17 @@ local function LoadList(url, localList, targetTable)
         if ok and type(result) == "table" then
             for _, id in ipairs(result) do
                 if type(id) == "number" then
-                    targetTable[id] = true
+                    premIds[id] = true
                 end
             end
         end
     end
 end
 
--- Load both lists synchronously so the whitelist gate below works
-LoadList(URL_PREM, LOCAL_PREM, premIds)
-LoadList(URL_FREE, LOCAL_FREE, freeIds)
+-- Only load premium list — free tier is open to everyone
+LoadPrem(URL_PREM, LOCAL_PREM)
 
--- Debug: print how many IDs loaded so you can verify in executor console
-local freeCt, premCt = 0, 0
-for _ in pairs(freeIds) do freeCt = freeCt + 1 end
-for _ in pairs(premIds) do premCt = premCt + 1 end
-warn("[VoidCenter] MyId="..tostring(LP.UserId).." | Free loaded="..freeCt.." | Prem loaded="..premCt)
-
--- ── Whitelist gate - stop the script if user isn't whitelisted ──
-local myId = LP.UserId
-if not premIds[myId] and not freeIds[myId] then
-    -- Show a notification if the GUI exists, then stop
-    pcall(function()
-        local sg = Instance.new("ScreenGui")
-        sg.Name = "VCDenied" sg.ResetOnSpawn = false
-        sg.Parent = game:GetService("CoreGui")
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(0,340,0,50)
-        lbl.Position = UDim2.new(0.5,-170,0.08,0)
-        lbl.BackgroundColor3 = Color3.fromRGB(20,0,0)
-        lbl.TextColor3 = Color3.fromRGB(255,80,80)
-        lbl.Font = Enum.Font.GothamBold
-        lbl.TextSize = 16
-        lbl.Text = "VoidCenter - Not Whitelisted"
-        lbl.BorderSizePixel = 0
-        lbl.Parent = sg
-        Instance.new("UICorner",lbl).CornerRadius = UDim.new(0,8)
-        task.delay(5, function() sg:Destroy() end)
-    end)
-    getgenv()._VC_BLOCKED = true
-    return  -- stop execution
-end
+warn("[VoidCenter] MyId="..tostring(LP.UserId).." | Premium="..tostring(premIds[LP.UserId] == true))
 
 local function IsPremium(player)
     local p = player or LP
