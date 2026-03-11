@@ -209,9 +209,16 @@ local function InitialPoll()
     end)
 end
 
--- Clean up when we leave
-game:GetService("Players").LocalPlayer.AncestryChanged:Connect(function()
-    pcall(CheckOut)
+-- Clean up on leave — use a polling check instead of events
+-- since BindToClose and AncestryChanged are server/restricted only
+task.spawn(function()
+    while task.wait(15) do
+        -- If player is no longer in game, check out
+        if not Players:FindFirstChild(LP.Name) then
+            pcall(CheckOut)
+            break
+        end
+    end
 end)
 
 -- Start everything
