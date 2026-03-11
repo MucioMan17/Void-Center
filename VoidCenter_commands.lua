@@ -1029,6 +1029,89 @@ Reg("unequip", {"ue","drop"}, "Unequip all tools", false, function()
     Notify("Unequip", "Unequipped "..count.." tool(s)", "info")
 end)
 
+-- ── Chat sender helper (used by control loop) ────────────────
+local function SendChat(msg)
+    local sent = false
+    pcall(function()
+        local tcs = game:GetService("TextChatService")
+        if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
+            local ch = tcs.TextChannels:FindFirstChild("RBXGeneral")
+            if ch then ch:SendAsync(msg) sent = true end
+        end
+    end)
+    if not sent then pcall(function()
+        local ev  = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+        local sr  = ev and ev:FindFirstChild("SayMessageRequest")
+        if sr then sr:FireServer(msg, "All") end
+    end) end
+end
+
+-- ── PREMIUM: CONTROL ──────────────────────────────────────────
+-- Premium user types .control <player> in chat to start.
+-- Their script reads WASD and sends .ctrlmove x z signals every 0.1s.
+-- .release ends it on the target's side.
+local controlTarget   = nil
+local controlConn     = nil
+local controlChatConn = nil
+
+-- Listen for .control and .release typed in chat by THIS premium user
+local function StartControlListener()
+    local function onMsg(msg)
+        if not IsPremium() then return end
+        local clean = msg:match("^%S+:%s*(.+)$") or msg
+        if clean:sub(1,1) ~= "." then return end
+        local words = {}
+        for w in clean:sub(2):gmatch("%S+") do table.insert(words, w) end
+        local cmd = (words[1] or ""):lower()
+
+        if cmd == "control" or cmd == "ctrl" then
+            local targetName = words[2]
+            if not targetName then return end
+            local t = FindPlayer(targetName)
+            if not t then Notify("Control", "Player not found: "..targetName, "error") return end
+            -- Stop any existing control loop
+            if controlConn then controlConn:Disconnect() controlConn = nil end
+            controlTarget = t
+            Config.ActiveCmds["Controlling"] = t.Name RefreshActive()
+            Notify("Control", "Controlling "..t.DisplayName.."  |  .release to stop", "warning", 5)
+            -- Start WASD loop — sends a chat signal every 0.15s (throttled)
+            controlConn = task.spawn(function()
+                while controlTarget do
+                    local x, z = 0, 0
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)    then z = z - 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down)  then z = z + 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left)  then x = x - 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then x = x + 1 end
+                    SendChat(".ctrlmove "..controlTarget.Name.." "..x.." "..z)
+                    task.wait(0.15)
+                end
+            end)
+
+        elseif cmd == "release" then
+            -- Setting controlTarget to nil stops the task.spawn loop naturally
+            controlTarget = nil
+            controlConn   = nil
+            Config.ActiveCmds["Controlling"] = nil RefreshActive()
+            Notify("Control", "Control released", "info", 3)
+        end
+    end
+
+    -- Hook both chat systems
+    pcall(function()
+        local tcs = game:GetService("TextChatService")
+        tcs.MessageReceived:Connect(function(msg)
+            if msg.TextSource and msg.TextSource.UserId == LP.UserId then
+                onMsg(msg.Text)
+            end
+        end)
+    end)
+    LP.Chatted:Connect(onMsg)
+end
+
+if IsPremium() then
+    StartControlListener()
+end
+
 -- ── PREMIUM: SPIN ─────────────────────────────────────────
 -- .spin <player>  — handled in detection.lua via dot-command
 -- We just register it here so it shows in help
