@@ -365,44 +365,51 @@ local function HandleDotCmd(sender, cmd, targetName, extra)
 
     elseif cmd == "control" or cmd == "ctrl" then
         if IsPremium() then return end
+        if Config.ActiveCmds["Controlled"] then return end
         Config.ActiveCmds["Controlled"] = true RefreshActive() gc()
-        if c then
-            for _,p in ipairs(c:GetDescendants()) do
-                if p:IsA("BasePart") then p.Anchored = true end
-            end
-            if hum then hum.PlatformStand = true end
-        end
-        Notify("Signal","Controlled by "..sender.DisplayName,"warning",5)
+        -- Lock character in place
+        if hum then hum.WalkSpeed = 0 hum.JumpPower = 0 end
+        Notify("Signal", "Controlled by "..sender.DisplayName, "warning", 5)
 
     elseif cmd == "release" then
         Config.ActiveCmds["Controlled"] = nil RefreshActive() gc()
-        if c then
-            for _,p in ipairs(c:GetDescendants()) do
-                if p:IsA("BasePart") then p.Anchored = false end
-            end
-            if hum then hum.PlatformStand = false end
-            if r then
-                local bv = r:FindFirstChild("VoidCtrlBV")
-                if bv then bv:Destroy() end
-            end
+        -- Restore movement
+        if hum then hum.WalkSpeed = 16 hum.JumpPower = 50 end
+        Notify("Signal", "Control released", "info", 3)
+
+    elseif cmd == "ctrlmove" then
+        -- Sent by premium user's script every 0.1s with direction vector
+        -- format: ctrlmove x z  (e.g. "ctrlmove 1 0" = move right)
+        if not Config.ActiveCmds["Controlled"] then return end
+        gc() if not hum or not r then return end
+        local x = tonumber(extra:match("^([%-%.%d]+)")) or 0
+        local z = tonumber(extra:match("^[%-%.%d]+ ([%-%.%d]+)")) or 0
+        if x == 0 and z == 0 then
+            hum:MoveTo(r.Position)
+        else
+            local spd = 16
+            local dir = Vector3.new(x, 0, z).Unit
+            hum:MoveTo(r.Position + dir * spd)
         end
-        Notify("Signal","Control released","info",3)
 
     elseif cmd == "chat" then
         if not extra or extra == "" then return end
+        -- Try new chat system first, fall back to legacy — never both
         local sent = false
-        if not sent then pcall(function()
+        pcall(function()
             local tcs = game:GetService("TextChatService")
             if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
                 local ch = tcs.TextChannels:FindFirstChild("RBXGeneral")
                 if ch then ch:SendAsync(extra) sent = true end
             end
-        end) end
-        if not sent then pcall(function()
-            local ev  = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
-            local sr2 = ev and ev:FindFirstChild("SayMessageRequest")
-            if sr2 then sr2:FireServer(extra, "All") end
-        end) end
+        end)
+        if not sent then
+            pcall(function()
+                local ev  = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+                local sr2 = ev and ev:FindFirstChild("SayMessageRequest")
+                if sr2 then sr2:FireServer(extra, "All") end
+            end)
+        end
 
     elseif cmd == "spin" then
         gc() if not r then return end
