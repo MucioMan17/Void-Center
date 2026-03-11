@@ -1,0 +1,96 @@
+-- ╔══════════════════════════════════════════════╗
+-- ║         VOID CENTER  v3.0.0  — Loader        ║
+-- ║   Paste this into your executor and run it.  ║
+-- ╚══════════════════════════════════════════════╝
+
+-- ── SET THIS ─────────────────────────────────────────────────
+-- Your GitHub raw URL ending with a slash, e.g.:
+-- "https://raw.githubusercontent.com/YourName/VoidCenter/main/"
+local BASE_URL = "https://raw.githubusercontent.com/MucioMan17/Void-Center-Users/refs/heads/main/"
+-- ─────────────────────────────────────────────────────────────
+
+-- Quick notification helper (works before core loads)
+local function Alert(msg)
+    pcall(function()
+        local sg  = Instance.new("ScreenGui")
+        sg.Name   = "VCAlert"
+        sg.ResetOnSpawn = false
+        local ok2, cg = pcall(function() return game:GetService("CoreGui") end)
+        sg.Parent = ok2 and cg or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+        local lbl = Instance.new("TextLabel")
+        lbl.Size                = UDim2.new(0, 420, 0, 44)
+        lbl.Position            = UDim2.new(0.5, -210, 0.04, 0)
+        lbl.BackgroundColor3    = Color3.fromRGB(14, 0, 30)
+        lbl.TextColor3          = Color3.fromRGB(255, 80, 80)
+        lbl.Font                = Enum.Font.GothamBold
+        lbl.TextSize            = 13
+        lbl.TextWrapped         = true
+        lbl.Text                = msg
+        lbl.BorderSizePixel     = 0
+        lbl.Parent              = sg
+        Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 8)
+        game:GetService("Debris"):AddItem(sg, 10)
+    end)
+    warn(msg)
+end
+
+-- Validate BASE_URL
+if BASE_URL == "" then
+    Alert("[VoidCenter] BASE_URL is empty — open loader.lua and set it to your GitHub raw URL.")
+    return
+end
+if BASE_URL:sub(-1) ~= "/" then
+    Alert("[VoidCenter] BASE_URL must end with a /  — e.g. .../main/")
+    return
+end
+
+-- Load a module from GitHub with clear error messages
+local function Load(file)
+    local url = BASE_URL .. file
+    -- Step 1: download
+    local rawCode
+    local ok1, err1 = pcall(function()
+        rawCode = game:HttpGet(url)
+    end)
+    if not ok1 then
+        Alert("[VoidCenter] Could not download " .. file .. "\nURL: " .. url .. "\nError: " .. tostring(err1))
+        return false
+    end
+    if not rawCode or rawCode == "" then
+        Alert("[VoidCenter] " .. file .. " downloaded but was empty.\nCheck the file exists at: " .. url)
+        return false
+    end
+    -- Step 2: compile
+    local fn, err2 = loadstring(rawCode)
+    if not fn then
+        Alert("[VoidCenter] Syntax error in " .. file .. ":\n" .. tostring(err2))
+        return false
+    end
+    -- Step 3: execute
+    local ok3, err3 = pcall(fn)
+    if not ok3 then
+        Alert("[VoidCenter] Runtime error in " .. file .. ":\n" .. tostring(err3))
+        return false
+    end
+    print("[VoidCenter] Loaded " .. file)
+    return true
+end
+
+-- Load core first — sets up _VC shared table, runs whitelist gate
+local coreOk = Load("VoidCenter_core.lua")
+if not coreOk then return end
+
+-- If not whitelisted, core.lua sets _VC_BLOCKED = true and returns
+if getgenv()._VC_BLOCKED then
+    getgenv()._VC_BLOCKED = nil
+    return
+end
+
+-- Load remaining modules in order
+local detOk = Load("VoidCenter_detection.lua")
+if not detOk then return end
+
+local cmdOk = Load("VoidCenter_commands.lua")
+if not cmdOk then return end
+
+Load("VoidCenter_gui.lua")
