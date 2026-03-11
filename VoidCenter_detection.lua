@@ -534,16 +534,36 @@ local function OnChat(speaker, msg)
 end
 
 -- ── Hook chat for dot-commands ───────────────────────────────
--- Use ONLY ONE chat system to avoid double-firing.
--- Try TextChatService first (new), fall back to Chatted (legacy).
+-- We use a debounce table to ensure each message is only
+-- processed once regardless of how many chat hooks fire.
+local recentMsgs = {}
+
+local function OnChatDeduped(speaker, msg)
+    if not msg or msg == "" then return end
+    -- Build a key from sender + message — if we've seen it in the last 1s, skip
+    local key = tostring(speaker.UserId) .. msg
+    if recentMsgs[key] then return end
+    recentMsgs[key] = true
+    task.delay(1, function() recentMsgs[key] = nil end)
+    task.spawn(OnChat, speaker, msg)
+end
+
+-- Hook legacy Chatted
 local function WatchPlayer(player)
     if not premIds[player.UserId] then return end
     player.Chatted:Connect(function(msg)
-        task.spawn(OnChat, player, msg)
+        OnChatDeduped(player, msg)
     end)
 end
 
-local hookedNew = false
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LP then WatchPlayer(p) end
+end
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LP then WatchPlayer(p) end
+end)
+
+-- Also hook TextChatService — deduped so it never fires twice
 pcall(function()
     local tcs = game:GetService("TextChatService")
     if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
@@ -554,21 +574,10 @@ pcall(function()
             if not p or p == LP then return end
             if not premIds[p.UserId] then return end
             local raw = (msg.OriginalText ~= "") and msg.OriginalText or msg.Text
-            task.spawn(OnChat, p, raw)
+            OnChatDeduped(p, raw)
         end)
-        hookedNew = true
     end
 end)
-
--- Only use legacy Chatted if TextChatService hook didn't work
-if not hookedNew then
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then WatchPlayer(p) end
-    end
-    Players.PlayerAdded:Connect(function(p)
-        if p ~= LP then WatchPlayer(p) end
-    end)
-end
 
 
 -- =========================================================
