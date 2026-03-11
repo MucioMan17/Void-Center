@@ -203,8 +203,9 @@ local function HandleDotCmd(sender, cmd, targetName, extra)
         local tn   = targetName:lower()
         local name = LP.Name:lower()
         local disp = LP.DisplayName:lower()
-        -- exact match first, then partial — same priority as FindPlayer
-        local match = (name == tn or disp == tn)
+        -- exact username, exact displayname, partial username, partial displayname
+        local match = (name == tn)
+                   or (disp == tn)
                    or (name:find(tn, 1, true) ~= nil)
                    or (disp:find(tn, 1, true) ~= nil)
         if not match then return end
@@ -334,11 +335,21 @@ end
 local function OnChat(speaker, msg)
     if not msg or msg == "" then return end
     if not premIds[speaker.UserId] then return end  -- only premium senders
-    if msg:sub(1,1) ~= DOT then return end
 
-    -- Split: .cmd target extra...
-    local parts = msg:sub(2):split(" ")
-    local cmd        = parts[1] and parts[1]:lower() or ""
+    -- Strip any "Name: " prefix that some chat systems prepend
+    local clean = msg:match("^%S+:%s*(.+)$") or msg
+    -- Must start with dot
+    if clean:sub(1,1) ~= DOT then return end
+
+    -- Split everything after the dot
+    local body  = clean:sub(2):match("^%s*(.-)%s*$")  -- trim
+    local parts = {}
+    for w in body:gmatch("%S+") do table.insert(parts, w) end
+    if #parts == 0 then return end
+
+    local cmd        = parts[1]:lower()
+    -- targetName is everything from part 2 up to but not including extra words
+    -- For .chat the extra is words 3+, for everything else words 2 is target and 3+ is extra
     local targetName = parts[2] or nil
     local extra      = #parts >= 3 and table.concat(parts, " ", 3) or ""
 
