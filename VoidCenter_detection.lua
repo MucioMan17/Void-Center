@@ -91,25 +91,115 @@ local function RegisterIfWhitelisted(player)
     end
 end
 
--- Scan everyone already in the server
-for _, p in ipairs(Players:GetPlayers()) do
-    RegisterIfWhitelisted(p)
+-- ── Attribute-based detection ────────────────────────────────
+-- SetAttribute replicates from LocalScript to all clients.
+-- We stamp our own HRP with vc=true and vc_prem=true/false.
+-- Every other script watches for that attribute on all players.
+-- New joiners scan existing HRPs on load so nobody is missed.
+
+local VC_ATTR      = "vc"
+local VC_PREM_ATTR = "vc_prem"
+
+-- Stamp our own HRP as soon as character exists
+local function StampSelf(character)
+    task.spawn(function()
+        local root = character:WaitForChild("HumanoidRootPart", 10)
+        if not root then return end
+        root:SetAttribute(VC_ATTR,      true)
+        root:SetAttribute(VC_PREM_ATTR, IsPremium())
+    end)
 end
 
--- Watch for new players joining
-Players.PlayerAdded:Connect(function(p)
-    -- Wait briefly for their character to load
-    task.delay(1, function() RegisterIfWhitelisted(p) end)
-end)
+if LP.Character then StampSelf(LP.Character) end
+LP.CharacterAdded:Connect(StampSelf)
+
+-- Register another player from their HRP attributes
+local function TryRegister(player)
+    if player == LP then return end
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    if not root:GetAttribute(VC_ATTR) then return end
+
+    local isPrem = root:GetAttribute(VC_PREM_ATTR) == true
+    local prev   = vcUsers[player]
+    vcUsers[player] = { premium = isPrem }
+
+    if not prev or prev.premium ~= isPrem
+    or not tagData[player] or not tagData[player].Parent then
+        MakeTag(player)
+    end
+
+    -- Watch for tier changes (e.g. if they reload as premium)
+    if not prev then
+        root:GetAttributeChangedSignal(VC_PREM_ATTR):Connect(function()
+            if vcUsers[player] then
+                vcUsers[player].premium = root:GetAttribute(VC_PREM_ATTR) == true
+                MakeTag(player)
+            end
+        end)
+        player.CharacterAdded:Connect(function(char)
+            task.spawn(function()
+                local r2 = char:WaitForChild("HumanoidRootPart", 10)
+                if not r2 then return end
+                -- Wait for stamp to replicate
+                local t = 0
+                while not r2:GetAttribute(VC_ATTR) and t < 5 do
+                    task.wait(0.2) t = t + 0.2
+                end
+                if r2:GetAttribute(VC_ATTR) then
+                    vcUsers[player] = { premium = r2:GetAttribute(VC_PREM_ATTR) == true }
+                    MakeTag(player)
+                end
+            end)
+        end)
+    end
+end
+
+-- Watch a player's HRP for the vc attribute appearing
+local function WatchForStamp(player)
+    if player == LP then return end
+    local function onChar(char)
+        task.spawn(function()
+            local root = char:WaitForChild("HumanoidRootPart", 10)
+            if not root then return end
+            -- Check immediately in case stamp already applied
+            if root:GetAttribute(VC_ATTR) then
+                TryRegister(player) return
+            end
+            -- Otherwise wait for it
+            local conn
+            conn = root:GetAttributeChangedSignal(VC_ATTR):Connect(function()
+                if root:GetAttribute(VC_ATTR) then
+                    conn:Disconnect()
+                    TryRegister(player)
+                end
+            end)
+            -- Timeout after 8s — not a VC user
+            task.delay(8, function()
+                if conn then pcall(function() conn:Disconnect() end) end
+            end)
+        end)
+    end
+    if player.Character then onChar(player.Character) end
+    player.CharacterAdded:Connect(onChar)
+end
+
+-- Scan everyone already in the server
+for _, p in ipairs(Players:GetPlayers()) do
+    WatchForStamp(p)
+end
+
+-- Watch new joiners
+Players.PlayerAdded:Connect(WatchForStamp)
 
 Players.PlayerRemoving:Connect(function(p)
     RemoveTag(p)
     vcUsers[p] = nil
 end)
 
--- Rebuild tags after we respawn
+-- Rebuild our view of all tags after we respawn
 LP.CharacterAdded:Connect(function()
-    task.wait(1)
+    task.wait(1.5)
     for p in pairs(vcUsers) do
         if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             MakeTag(p)
