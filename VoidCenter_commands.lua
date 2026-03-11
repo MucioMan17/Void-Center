@@ -454,12 +454,25 @@ local function BuildSafePlatform()
     safePlatform    = model
 end
 
-Reg("safe", {"sz"}, "Teleport to the VoidCenter safe platform high above the map", false, function()
-    BuildSafePlatform()
+local safeReturnCF = nil  -- stores position before going to safe zone
+
+Reg("safe", {"sz"}, "Teleport to safe platform  |  type again to return", false, function()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if r then
+    if not r then return end
+
+    local atSafe = math.abs(r.Position.Y - SAFE_POS.Y) < 200
+
+    if atSafe and safeReturnCF then
+        -- Already at safe zone — teleport back to where we came from
+        r.CFrame = safeReturnCF
+        safeReturnCF = nil
+        Notify("Safe Zone", "Returned to previous location", "info", 3)
+    else
+        -- Save current position then go to safe zone
+        safeReturnCF = r.CFrame
+        BuildSafePlatform()
         r.CFrame = CFrame.new(SAFE_POS + Vector3.new(math.random(-20,20), 4, math.random(-20,20)))
-        Notify(" Safe Zone","Welcome to the VoidCenter safe platform! Type 'safe' to return here anytime","success",5)
+        Notify("Safe Zone", "At safe platform  |  type 'safe' again to return", "success", 4)
     end
 end)
 
