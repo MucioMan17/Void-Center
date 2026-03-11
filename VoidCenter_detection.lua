@@ -58,35 +58,19 @@ local function MakeTag(player)
 
     local bill = Instance.new("BillboardGui")
     bill.Name                  = "VTag_"..player.Name
-    bill.Size                  = UDim2.new(0, 90, 0, 26)
-    bill.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
+    bill.Size                  = UDim2.new(0, 12, 0, 12)
+    bill.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
     bill.AlwaysOnTop           = true
     bill.LightInfluence        = 0
     bill.MaxDistance           = 0
     bill.Parent                = root
 
-    -- Black box background
-    local bg = Instance.new("Frame")
-    bg.BackgroundColor3       = Color3.fromRGB(0, 0, 0)
-    bg.BackgroundTransparency = 0
-    bg.BorderSizePixel        = 0
-    bg.Size                   = UDim2.new(1, 0, 1, 0)
-    bg.Parent                 = bill
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 6)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color     = acC
-    stroke.Thickness = 1.5
-    stroke.Parent    = bg
-
-    -- FREE or PREMIUM text
-    local lbl = Instance.new("TextLabel")
-    lbl.BackgroundTransparency = 1
-    lbl.Size                   = UDim2.new(1, 0, 1, 0)
-    lbl.Font                   = Enum.Font.GothamBold
-    lbl.Text                   = prem and "PREMIUM" or "FREE"
-    lbl.TextColor3             = acC
-    lbl.TextSize               = 11
-    lbl.Parent                 = bg
+    local dot = Instance.new("Frame")
+    dot.BackgroundColor3 = acC
+    dot.BorderSizePixel  = 0
+    dot.Size             = UDim2.new(1, 0, 1, 0)
+    dot.Parent           = bill
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
     tagData[player] = bill
 end
