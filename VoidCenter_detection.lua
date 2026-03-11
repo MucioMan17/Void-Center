@@ -8,7 +8,6 @@ local C              = _VC.C
 local N              = _VC.N
 local Config         = _VC.Config
 local IsPremium      = _VC.IsPremium
-local freeIds        = _VC.freeIds
 local premIds        = _VC.premIds
 local Notify         = _VC.Notify
 local FindPlayer     = _VC.FindPlayer
@@ -34,8 +33,9 @@ local vcUsers = {}   -- [player] = { premium = bool }
 local function IsVoidUser(p) return vcUsers[p] ~= nil end
 
 local function IsWhitelisted(player)
-    local id = player.UserId
-    return freeIds[id] or premIds[id]
+    -- Everyone running the script is considered a VC user.
+    -- Premium check is separate (premIds only).
+    return vcUsers[player] ~= nil
 end
 
 -- ── Tags ──────────────────────────────────────────────────────
@@ -68,11 +68,10 @@ end
 
 -- Register a player as a VC user based on whitelist tier
 local function RegisterIfWhitelisted(player)
+    -- Name kept for compatibility but now registers ALL players — free tier is open.
+    -- Premium is determined solely by premIds.
     if player == LP then return end
-    local id   = player.UserId
-    local isPrem = premIds[id] == true
-    local isFree = freeIds[id] == true
-    if not isPrem and not isFree then return end  -- not whitelisted, skip
+    local isPrem = premIds[player.UserId] == true
 
     local prev = vcUsers[player]
     vcUsers[player] = { premium = isPrem }
