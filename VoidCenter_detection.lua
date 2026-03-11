@@ -68,7 +68,7 @@ local function MakeTag(player)
     bill.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
     bill.AlwaysOnTop           = true
     bill.LightInfluence        = 0
-    bill.MaxDistance           = 60
+    bill.MaxDistance           = 9999
     bill.Parent                = root
 
     -- Pill background — very subtle, semi-transparent
