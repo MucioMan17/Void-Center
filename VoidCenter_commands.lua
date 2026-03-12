@@ -1,1 +1,1333 @@
-local v0=getgenv()._VC;local v1=v0.LP;local v2=v0.Players;local v3=v0.RunService;local v4=v0.UserInputService;local v5=v0.TweenService;local v6=v0.MarketplaceService;local v7=v0.Debris;local v8=v0.Camera;local v9=v0.C;local v10=v0.TF;local v11=v0.TM;local v12=v0.N;local v13=v0.Tween;local v14=v0.Corner;local v15=v0.Stroke;local v16=v0.Pad;local v17=v0.Config;local v18=v0.IsPremium;local v19=v0.freeIds;local v20=v0.premIds;local v21=v0.Notify;local v22=v0.FindPlayer;local v23=v0.PStr;local v24=v0.Reg;local v25=v0.RefreshActive;local v26=v0.Screen;local v27=v0.vcUsers;local v28=v0.IsVoidUser;local v29=v0.IsWhitelisted;local v30=false;local v31=nil;local v32=nil;local v33=nil;local function v34() local v73=0 + 0 ;while true do if (v73==(27 -(11 + 15))) then if v33 then local v416=0;while true do if (v416==(194 -(26 + 168))) then v33:Disconnect();v33=nil;break;end end end pcall(function() if (v31 and v31.Parent) then v31:Destroy();end end);v31=nil;pcall(function() if (v32 and v32.Parent) then v32:Destroy();end end);v73=2 -0 ;end if ((880 -(284 + 594))==v73) then v32=nil;pcall(function() local v401=0 -0 ;local v402;while true do if (v401==(0 -0)) then v402=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;if v402 then v402.PlatformStand=false;end break;end end end);v21("Fly","Landed","info");break;end if (v73==0) then if  not v30 then return;end v30=false;v17.ActiveCmds['Fly']=nil;v25();v73=1;end end end local function v35() if v30 then v34();return;end local v74=v1.Character;local v75=v74 and v74:FindFirstChild("HumanoidRootPart") ;local v76=v74 and v74:FindFirstChildOfClass("Humanoid") ;if ( not v75 or  not v76) then local v242=166 -(122 + 44) ;while true do if (v242==0) then v21("Fly","No character","error");return;end end end v30=true;v17.ActiveCmds['Fly']=true;v25();v76.PlatformStand=true;v32=Instance.new("BodyGyro",v75);v32.P=155460 -65460 ;v32.MaxTorque=Vector3.new(8999999488 -0 ,8999999488,9000000687 -(1026 + 173) );v32.CFrame=v75.CFrame;v31=Instance.new("BodyVelocity",v75);v31.MaxForce=Vector3.new(8999999488 -0 ,8999999553 -(30 + 35) ,9000000116 -(395 + 233) );v31.Velocity=Vector3.zero;v33=v3.RenderStepped:Connect(function() local v212=v1.Character;if  not v212 then return;end local v213=v212:FindFirstChild("HumanoidRootPart");if ( not v213 or  not v31 or  not v31.Parent) then return;end local v214=workspace.CurrentCamera;local v215=v17.FlySpeed;local v216=Vector3.zero;if v4:IsKeyDown(Enum.KeyCode.W) then v216=v216 + v214.CFrame.LookVector ;end if v4:IsKeyDown(Enum.KeyCode.S) then v216=v216-v214.CFrame.LookVector ;end if v4:IsKeyDown(Enum.KeyCode.A) then v216=v216-v214.CFrame.RightVector ;end if v4:IsKeyDown(Enum.KeyCode.D) then v216=v216 + v214.CFrame.RightVector ;end if (v4:IsKeyDown(Enum.KeyCode.Space) or v4:IsKeyDown(Enum.KeyCode.ButtonA)) then v216=v216 + Vector3.new(0 -0 ,1 -0 ,0) ;end if (v4:IsKeyDown(Enum.KeyCode.LeftControl) or v4:IsKeyDown(Enum.KeyCode.LeftShift)) then v216=v216-Vector3.new(0 -0 ,581 -(361 + 219) ,0) ;end if v4:IsKeyDown(Enum.KeyCode.E) then v215=v215 * (322.5 -(53 + 267)) ;end v31.Velocity=((v216.Magnitude>0) and (v216.Unit * v215)) or Vector3.zero ;v32.CFrame=v214.CFrame;end);v21("Fly","WASD to move  Space/Ctrl up-down  E to boost  fly again to land","success");end v24("fly",{"f"},"Toggle fly",false,function() v35();end);v24("flyspeed",{"fs"},"Set fly speed  e.g. flyspeed 80",false,function(v86) local v87=tonumber(v86[983 -(18 + 964) ]);if (v87 and (v87>(0 -0))) then local v243=0 + 0 ;while true do if (v243==(0 + 0)) then v17.FlySpeed=v87;v21("Fly","Speed set to "   .. v87 ,"success");break;end end else v21("Fly","Usage: flyspeed <number>","warning");end end);local v36=false;local v37;local function v38() if  not v36 then return;end v36=false;v17.ActiveCmds['Noclip']=nil;v25();if v37 then v37:Disconnect();v37=nil;end local v89=v1.Character;if v89 then for v311,v312 in ipairs(v89:GetDescendants()) do if v312:IsA("BasePart") then v312.CanCollide=true;end end end v21("Noclip","Collision restored","info");end local function v39() local v90=850 -(20 + 830) ;while true do if ((2 + 0)==v90) then v37=v3.Stepped:Connect(function() if  not v36 then return;end local v403=v1.Character;if  not v403 then return;end for v419,v420 in ipairs(v403:GetDescendants()) do if v420:IsA("BasePart") then v420.CanCollide=false;end end end);v21("Noclip","Phase through walls - run again to stop","success");break;end if (v90==(126 -(116 + 10))) then if v36 then v38();return;end v36=true;v90=1;end if (v90==(1 + 0)) then v17.ActiveCmds['Noclip']=true;v25();v90=740 -(542 + 196) ;end end end v24("noclip",{"nc"},"Toggle noclip / phase through walls",false,function() v39();end);local v40=false;local v41={};local function v42(v91) if v41[v91] then local v244=0;while true do if (v244==(0 -0)) then pcall(function() v41[v91].hl:Destroy();end);pcall(function() v41[v91].bill:Destroy();end);v244=1 + 0 ;end if (v244==(1 + 0)) then if v41[v91].hconn then pcall(function() v41[v91].hconn:Disconnect();end);end v41[v91]=nil;break;end end end end local function v43(v92) local v93=0 + 0 ;local v94;local v95;local v96;local v97;local v98;local v99;local v100;local v101;while true do if (v93==(15 -9)) then v12("TextLabel",{BackgroundTransparency=2 -1 ,Size=UDim2.new(1,0,1551 -(1126 + 425) ,433 -(118 + 287) ),Font=Enum.Font.GothamBold,Text=v92.DisplayName,TextColor3=Color3.fromRGB(842 -627 ,1286 -(118 + 1003) ,746 -491 ),TextSize=397 -(142 + 235) ,TextStrokeTransparency=0.2 -0 ,TextStrokeColor3=v9.Black},v97);v12("TextLabel",{BackgroundTransparency=1 + 0 ,Position=UDim2.new(0,977 -(553 + 424) ,0 -0 ,24 + 3 ),Size=UDim2.new(1,0 + 0 ,0 + 0 ,9 + 11 ),Font=Enum.Font.Gotham,Text="@"   .. v92.Name ,TextColor3=Color3.fromRGB(185,78 + 57 ,552 -297 ),TextSize=44 -28 ,TextStrokeTransparency=0.3,TextStrokeColor3=v9.Black},v97);v98=v12("Frame",{BackgroundColor3=Color3.fromRGB(40 -22 ,0,36),BorderSizePixel=0,Position=UDim2.new(1 + 0 ,6,0.06 -0 ,753 -(239 + 514) ),Size=UDim2.new(0,2 + 3 ,1329.88 -(797 + 532) ,0 + 0 )},v97);v93=7;end if (v93==3) then v96.OutlineTransparency=0 + 0 ;v96.Adornee=v94;v96.Parent=v94;v93=4;end if (v93==(9 -5)) then v97=Instance.new("BillboardGui");v97.Name="VESP_"   .. v92.Name ;v97.Size=UDim2.new(0,1402 -(373 + 829) ,0,799 -(476 + 255) );v93=5;end if (v93==(1139 -(369 + 761))) then v41[v92]={hl=v96,bill=v97,hconn=v101};break;end if (v93==(3 + 2)) then v97.StudsOffset=Vector3.new(0,5.5 -2 ,0 -0 );v97.AlwaysOnTop=true;v97.Parent=v95;v93=244 -(64 + 174) ;end if (v93==(2 + 6)) then v100=v94:FindFirstChildOfClass("Humanoid");v101=nil;if v100 then local v422=0 -0 ;local v423;while true do if (v422==0) then v423=nil;function v423(v538) local v539=336 -(144 + 192) ;local v540;while true do if (v539==1) then v13(v99,v10,{Size=UDim2.new(1,216 -(42 + 174) ,v540,0),Position=UDim2.new(0 + 0 ,0 + 0 ,(1 + 0) -v540 ,0),BackgroundColor3=Color3.fromRGB(math.floor(255 * ((1505 -(363 + 1141)) -v540) ),math.floor(180 * v540 ),math.floor((1835 -(1183 + 397)) * v540 ))});break;end if ((0 -0)==v539) then if  not v41[v92] then return;end v540=math.clamp(v538/math.max(v100.MaxHealth,1 + 0 ) ,0,1 + 0 );v539=1;end end end v422=1976 -(1913 + 62) ;end if (v422==1) then v423(v100.Health);v101=v100.HealthChanged:Connect(v423);break;end end end v93=6 + 3 ;end if (v93==7) then v14(10 -6 ,v98);v99=v12("Frame",{AnchorPoint=Vector2.new(0,1934 -(565 + 1368) ),BackgroundColor3=Color3.fromRGB(120,40,958 -703 ),BorderSizePixel=1661 -(1477 + 184) ,Position=UDim2.new(0 -0 ,0 + 0 ,857 -(564 + 292) ,0 -0 ),Size=UDim2.new(1,0 -0 ,305 -(244 + 60) ,0 + 0 )},v98);v14(480 -(41 + 435) ,v99);v93=1009 -(938 + 63) ;end if (0==v93) then if (v92==v1) then return;end v42(v92);v94=v92.Character;v93=1 + 0 ;end if (v93==(1127 -(936 + 189))) then v96.FillColor=Color3.fromRGB(55,0,37 + 73 );v96.OutlineColor=Color3.fromRGB(160,50,1868 -(1565 + 48) );v96.FillTransparency=0.8 + 0 ;v93=1141 -(782 + 356) ;end if (v93==(268 -(176 + 91))) then v95=v94 and v94:FindFirstChild("HumanoidRootPart") ;if ( not v94 or  not v95) then return;end v96=Instance.new("Highlight");v93=2;end end end task.spawn(function() while true do task.wait(1.5);if  not v40 then continue;end for v245,v246 in ipairs(v2:GetPlayers()) do if (v246==v1) then continue;end local v247=v246.Character;local v248=v247 and v247:FindFirstChild("HumanoidRootPart") ;if ( not v247 or  not v248) then v42(v246);elseif ( not v41[v246] or  not v41[v246].hl or  not v41[v246].hl.Parent or (v41[v246].hl.Adornee~=v247)) then task.spawn(v43,v246);end end for v249 in pairs(v41) do if ( not v249 or  not v249.Parent) then v42(v249);end end end end);v2.PlayerAdded:Connect(function(v102) v102.CharacterAdded:Connect(function() task.wait(2.2 -1 );if v40 then v43(v102);end end);end);v2.PlayerRemoving:Connect(function(v103) v42(v103);end);for v104,v105 in ipairs(v2:GetPlayers()) do if (v105~=v1) then v105.CharacterAdded:Connect(function() task.wait(1.2 -0 );if v40 then v43(v105);end end);end end local function v44() local v106=1092 -(975 + 117) ;while true do if (v106==(1875 -(157 + 1718))) then v40=true;v17.ActiveCmds['ESP']=true;v106=1;end if (v106==(2 + 0)) then v21("ESP","Tracking "   .. tostring( #v2:GetPlayers() -(3 -2) )   .. " player(s) - auto-updates" ,"success");break;end if (v106==(3 -2)) then v25();for v404,v405 in ipairs(v2:GetPlayers()) do task.spawn(v43,v405);end v106=2;end end end local function v45() local v107=1018 -(697 + 321) ;while true do if (v107==(2 -1)) then v25();for v406 in pairs(v41) do v42(v406);end v107=2;end if (v107==(3 -1)) then v21("ESP","Disabled","info");break;end if ((0 -0)==v107) then v40=false;v17.ActiveCmds['ESP']=nil;v107=1;end end end v24("esp",{"e"},"Toggle ESP (box - names - health - auto-updates)",false,function() if v40 then v45();else v44();end end);v24("prem",{"premium","pcmds"},"List premium dot-commands (type in Roblox chat)",true,function() v21("Premium Commands",".fling .bring .bringall .freeze .unfreeze .kill .kick .unkick .chat","gold",21 -13 );end);v24("goto",{"tp","go"},"Teleport to player  e.g. goto Player1 or goto DisplayName",false,function(v108) local v109=0;local v110;local v111;local v112;while true do if (v109==(611 -(602 + 9))) then v110=v22(v108[1190 -(449 + 740) ]);if  not v110 then v21("Goto","Not found: "   .. (v108[1] or "?") ,"error");return;end v109=873 -(826 + 46) ;end if (v109==(949 -(245 + 702))) then if (v111 and v112) then local v424=0 -0 ;while true do if (v424==(0 + 0)) then v111.CFrame=v112.CFrame + Vector3.new(3,1898 -(260 + 1638) ,440 -(382 + 58) ) ;v21("Goto","--> "   .. v23(v110) ,"success");break;end end else v21("Goto","Target has no character","error");end break;end if (v109==(3 -2)) then v111=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;v112=v110.Character and v110.Character:FindFirstChild("HumanoidRootPart") ;v109=2 + 0 ;end end end);v24("walkspeed",{"ws","speed"},"Set your walk speed  e.g. walkspeed 30",false,function(v113) local v114=tonumber(v113[2 -1 ]) or 16 ;local v115=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;if v115 then local v250=1205 -(902 + 303) ;while true do if (v250==0) then v115.WalkSpeed=v114;v21("WalkSpeed","Speed -> "   .. v114 ,"success");break;end end end end);v24("jumppower",{"jp"},"Set your jump power  e.g. jumppower 80",false,function(v116) local v117=0;local v118;local v119;while true do if (v117==1) then if v119 then local v426=0 -0 ;while true do if (v426==(0 + 0)) then v119.JumpPower=v118;v21("JumpPower","Power -> "   .. v118 ,"success");break;end end end break;end if (v117==(1690 -(1121 + 569))) then v118=tonumber(v116[1]) or (264 -(22 + 192)) ;v119=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;v117=1;end end end);v24("resetstats",{"rss"},"Reset your speed and jump to default",false,function() local v120=0;local v121;while true do if (v120==(1463 -(1404 + 59))) then v121=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;if v121 then local v427=0 -0 ;while true do if ((0 -0)==v427) then v121.WalkSpeed=781 -(468 + 297) ;v121.JumpPower=612 -(334 + 228) ;v427=3 -2 ;end if (v427==(2 -1)) then v21(" ResetStats","Speed & jump reset to default","info");break;end end end break;end end end);local v46=nil;local v47=Vector3.new(0 -0 ,5000,0 + 0 );local function v48() local v122=0;local v123;local v124;local v125;local v126;local v127;local v128;local v129;local v130;while true do if (v122==(241 -(141 + 95))) then v128.Size=Vector3.new(8 + 0 ,7 -4 ,0.5);v128.Position=v47 + Vector3.new(0,4.5 -2 , -28) ;v128.Anchored=true;v128.CanCollide=false;v128.Material=Enum.Material.SmoothPlastic;v128.Color=Color3.fromRGB(8 + 22 ,0,60);v122=16 -10 ;end if (v122==7) then v130.BackgroundColor3=Color3.fromRGB(30,0,43 + 17 );v130.TextColor3=Color3.fromRGB(105 + 95 ,140 -40 ,151 + 104 );v130.Font=Enum.Font.GothamBold;v130.Text="  VoidCenter Safe Zone  ";v130.TextScaled=true;v130.Parent=v129;v122=8;end if (v122==1) then v125.Size=Vector3.new(60,2,223 -(92 + 71) );v125.Position=v47;v125.Anchored=true;v125.CanCollide=true;v125.Material=Enum.Material.SmoothPlastic;v125.Color=Color3.fromRGB(80,0,60 + 60 );v122=2 -0 ;end if (v122==(769 -(574 + 191))) then v127.Color=Color3.fromRGB(124 + 26 ,0,638 -383 );v127.Range=21 + 19 ;v127.Face=Enum.NormalId.Top;v127.Parent=v125;v128=Instance.new("Part");v128.Name="Sign";v122=854 -(254 + 595) ;end if (v122==(132 -(55 + 71))) then v128.Parent=v124;v129=Instance.new("SurfaceGui");v129.Face=Enum.NormalId.Front;v129.Parent=v128;v130=Instance.new("TextLabel");v130.Size=UDim2.new(1,0 -0 ,1791 -(573 + 1217) ,0 -0 );v122=1 + 6 ;end if (v122==(0 -0)) then v123=workspace:FindFirstChild("VoidSafePlatform");if v123 then v46=v123;return;end v124=Instance.new("Model");v124.Name="VoidSafePlatform";v125=Instance.new("Part");v125.Name="Floor";v122=940 -(714 + 225) ;end if (v122==(8 -5)) then v126.CanCollide=false;v126.Material=Enum.Material.SmoothPlastic;v126.Color=Color3.fromRGB(13 -3 ,0 + 0 ,20);v126.Parent=v124;v127=Instance.new("SurfaceLight");v127.Brightness=3 -0 ;v122=4;end if (v122==8) then v124.Parent=workspace;v124.PrimaryPart=v125;v46=v124;break;end if (v122==(808 -(118 + 688))) then v125.Parent=v124;v126=Instance.new("Part");v126.Name="Border";v126.Size=Vector3.new(112 -(25 + 23) ,1 + 0 ,1950 -(927 + 959) );v126.Position=v47-Vector3.new(0 -0 ,0.5,732 -(16 + 716) ) ;v126.Anchored=true;v122=3;end end end local v49=nil;v24("safe",{"sz"},"Teleport to safe platform  |  type again to return",false,function() local v131=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;if  not v131 then return;end local v132=math.abs(v131.Position.Y-v47.Y )<(297 -(11 + 86)) ;if (v132 and v49) then local v251=0;while true do if (v251==(0 -0)) then v131.CFrame=v49;v49=nil;v251=1;end if ((286 -(175 + 110))==v251) then v21("Safe Zone","Returned to previous location","info",6 -3 );break;end end else local v252=0;while true do if (v252==0) then v49=v131.CFrame;v48();v252=1;end if (v252==(4 -3)) then v131.CFrame=CFrame.new(v47 + Vector3.new(math.random( -(1816 -(503 + 1293)),20),4,math.random( -20,55 -35 )) );v21("Safe Zone","At safe platform  |  type 'safe' again to return","success",4);break;end end end end);v24("reset",{"rme","r"},"Reset your own character",false,function() local v133=1061 -(810 + 251) ;local v134;while true do if (v133==(0 + 0)) then v134=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;if v134 then v134.Health=0;v21("Reset","Resetting your character...","info",1 + 1 );end break;end end end);v24("antiafk",{"aafk"},"Toggle anti-AFK (prevents auto-kick)",false,function() if v17.ActiveCmds['AntiAFK'] then v17.ActiveCmds['AntiAFK']=nil;v25();v21("Anti-AFK","Disabled","info");else v17.ActiveCmds['AntiAFK']=true;v25();v21("Anti-AFK","Enabled - you will not be kicked for AFK","success");task.spawn(function() local v376=0 + 0 ;local v377;while true do if (v376==(533 -(43 + 490))) then v377=game:GetService("VirtualUser");while v17.ActiveCmds['AntiAFK'] do local v493=733 -(711 + 22) ;while true do if (v493==(0 -0)) then task.wait(919 -(240 + 619) );if v17.ActiveCmds['AntiAFK'] then pcall(function() v377:Button2Down(Vector2.new(0 + 0 ,0 -0 ),workspace.CurrentCamera.CFrame);end);task.wait(1 + 0 );pcall(function() v377:Button2Up(Vector2.new(1744 -(1344 + 400) ,405 -(255 + 150) ),workspace.CurrentCamera.CFrame);end);end break;end end end break;end end end);end end);local v50;v24("antifling",{"afl"},"Toggle anti-fling - others phase through you",false,function() if v17.ActiveCmds['AntiFling'] then v17.ActiveCmds['AntiFling']=nil;if v50 then v50:Disconnect();v50=nil;end v25();if  not v36 then pcall(function() local v432=v1.Character;if v432 then for v510,v511 in ipairs(v432:GetDescendants()) do if v511:IsA("BasePart") then v511.CanCollide=true;end end end end);end v21("Anti-Fling","Disabled","info");else v17.ActiveCmds['AntiFling']=true;v25();v21("Anti-Fling","Enabled - players phase through you","success");v50=v3.Stepped:Connect(function() pcall(function() local v407=v1.Character;if  not v407 then return;end for v433,v434 in ipairs(v407:GetDescendants()) do if v434:IsA("BasePart") then v434.CanCollide=false;end end end);end);end end);v24("antivoid",{"av"},"Toggle anti-void protection",false,function() if v17.ActiveCmds['AntiVoid'] then v17.ActiveCmds['AntiVoid']=nil;v25();v21("Anti-Void","Disabled","info");else local v258=0;local v259;local v260;local v261;local v262;while true do if (v258==(0 + 0)) then v17.ActiveCmds['AntiVoid']=true;v25();v258=1 + 0 ;end if (v258==1) then v259= -(2136 -1636);pcall(function() v259=workspace.FallenPartsDestroyHeight;end);v258=6 -4 ;end if (v258==(1741 -(404 + 1335))) then v260=v259 + 30 ;v261=506 -(183 + 223) ;v258=3;end if (v258==(3 -0)) then pcall(function() local v462=v1.Character;local v463=v462 and v462:FindFirstChild("HumanoidRootPart") ;if v463 then v261=math.max(v463.Position.Y + 7 + 3 ,10);end end);v21("Anti-Void","Enabled  (trigger: Y < "   .. math.floor(v260)   .. ")" ,"success");v258=4;end if (v258==(2 + 2)) then v262=false;task.spawn(function() while v17.ActiveCmds['AntiVoid'] do local v495=337 -(10 + 327) ;while true do if (v495==(0 + 0)) then task.wait(0.04);pcall(function() local v561=338 -(118 + 220) ;local v562;local v563;local v564;while true do if (v561==(1 + 0)) then v564=v562 and v562:FindFirstChildOfClass("Humanoid") ;if ( not v563 or  not v564 or v262) then return;end v561=451 -(108 + 341) ;end if (v561==(1 + 1)) then if (v564.Health<=0) then return;end if (v563.Position.Y<v260) then local v580=0 -0 ;while true do if (v580==(1493 -(711 + 782))) then v262=true;v564.Health=v564.MaxHealth;v580=1 -0 ;end if ((472 -(270 + 199))==v580) then pcall(function() local v586=0;local v587;local v588;while true do if (v586==(0 + 0)) then v587=v1.Character;v588=v587 and v587:FindFirstChild("HumanoidRootPart") ;v586=1820 -(580 + 1239) ;end if (v586==(2 -1)) then if v588 then v261=math.max(v588.Position.Y + 10 + 0 ,10);end break;end end end);break;end if (v580==(1 + 0)) then v563.CFrame=CFrame.new(v563.Position.X,v261,v563.Position.Z);v21("Anti-Void","Saved!","success",2 + 1 );v580=2;end if (v580==(4 -2)) then task.wait(1.5 + 0 );v262=false;v580=1170 -(645 + 522) ;end end end break;end if (0==v561) then v562=v1.Character;v563=v562 and v562:FindFirstChild("HumanoidRootPart") ;v561=1791 -(1010 + 780) ;end end end);break;end end end end);break;end end end end);v24("spectate",{"spec","view"},"Spectate a player  e.g. spectate Player1 | spectate stop",false,function(v135) if ( not v135[4 -3 ] or (v135[2 -1 ]:lower()=="stop")) then local v263=workspace.CurrentCamera;v263.CameraType=Enum.CameraType.Custom;v263.CameraSubject=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;v17.ActiveCmds['Spectating']=nil;v25();v21("Spectate","Camera restored","info",1839 -(1045 + 791) );return;end local v136=v22(v135[1]);if  not v136 then local v268=0;while true do if ((0 -0)==v268) then v21("Spectate","Player not found: "   .. (v135[1 -0 ] or "?") ,"error");return;end end end if (v136==v1) then v21("Spectate","Can't spectate yourself","warning");return;end local v137=v136.Character and v136.Character:FindFirstChildOfClass("Humanoid") ;if  not v137 then local v269=505 -(351 + 154) ;while true do if (v269==0) then v21("Spectate",v23(v136)   .. " has no character" ,"error");return;end end end local v138=workspace.CurrentCamera;v138.CameraType=Enum.CameraType.Custom;v138.CameraSubject=v137;v17.ActiveCmds['Spectating']=true;v25();v21("Spectate","Now viewing "   .. v23(v136)   .. "\nType 'spectate stop' to exit" ,"success",1578 -(1281 + 293) );v136.CharacterAdded:Connect(function(v220) local v221=266 -(28 + 238) ;local v222;while true do if (v221==(0 -0)) then if  not v17.ActiveCmds['Spectating'] then return;end task.wait(1559.5 -(1381 + 178) );v221=1;end if ((1 + 0)==v221) then v222=v220:FindFirstChildOfClass("Humanoid");if v222 then v138.CameraSubject=v222;end break;end end end);end);v24("rejoin",{"rj"},"Rejoin the current game",false,function() game:GetService("TeleportService"):Teleport(game.PlaceId,v1);end);v24("help",{"cmds","commands"},"List all commands",false,function() v21("Utility","fly / flyspeed / noclip / esp / goto / safe / reset\nwalkspeed / jumppower / resetstats / rejoin / spectate","info",27 -19 );task.wait(0.5 + 0 );v21("Visual","trail / rainbow / ghost / invisible / bighead / nametag","info",478 -(381 + 89) );task.wait(0.5 + 0 );v21("Combat & Tools","hitbox / reach / zoom / thirdperson / hat / unequip","info",8);task.wait(0.5);v21("Info","find / players / copyfit / antiafk / antifling / antivoid","info",6 + 2 );task.wait(0.5);if v18() then v21("Premium [P]  (type in Roblox chat)",".fling .bring .bringall .freeze .unfreeze\n.kill .kick .unkick .spin .explode\n.follow .unfollow .tp2me .untp2me .chat","gold",10);else v21("Premium","Get whitelisted for Premium to unlock troll commands.","gold",9 -3 );end end);local v51=nil;v24("nametag",{"nt"},"Set a custom tag above your head  e.g. nametag cool guy | nametag off",false,function(v143) if v51 then local v270=0;while true do if (v270==(1156 -(1074 + 82))) then pcall(function() v51:Destroy();end);v51=nil;break;end end end local v144=table.concat(v143," ");if ((v144=="") or (v144:lower()=="off")) then v21("Nametag","Removed","info");return;end local v145=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;if  not v145 then v21("Nametag","No character","error");return;end local v146=Instance.new("BillboardGui");v146.Size=UDim2.new(0 -0 ,200,1784 -(214 + 1570) ,30);v146.StudsOffsetWorldSpace=Vector3.new(0,1458.5 -(990 + 465) ,0);v146.AlwaysOnTop=true;v146.LightInfluence=0;v146.MaxDistance=0 + 0 ;v146.Parent=v145;local v153=Instance.new("TextLabel");v153.BackgroundTransparency=1 + 0 ;v153.Size=UDim2.new(1,0 + 0 ,3 -2 ,0);v153.Font=Enum.Font.GothamBold;v153.Text=v144;v153.TextColor3=v9.AcctBr;v153.TextSize=1740 -(1668 + 58) ;v153.TextStrokeTransparency=626.3 -(512 + 114) ;v153.TextStrokeColor3=Color3.fromRGB(0 -0 ,0 -0 ,0 -0 );v153.Parent=v146;v51=v146;v1.CharacterAdded:Connect(function(v223) local v224=0 + 0 ;local v225;while true do if (v224==(1 + 0)) then v225=v223:FindFirstChild("HumanoidRootPart");if v225 then v146.Parent=v225;end break;end if (v224==(0 + 0)) then if  not v51 then return;end task.wait(1);v224=3 -2 ;end end end);v21("Nametag","Set to: "   .. v144 ,"success");end);local v52=false;local v53=nil;local v54={};v24("hitbox",{"hb"},"Expand your hitbox  e.g. hitbox 10 | hitbox off",false,function(v165) local v166=0;local v167;local v168;local v169;while true do if (v166==(1470 -(1269 + 200))) then if  not v168 then v21("Hitbox","No character","error");return;end v52=true;v17.ActiveCmds['Hitbox']=true;v166=3 -1 ;end if (v166==(818 -(98 + 717))) then v169(v168);v53=v1.CharacterAdded:Connect(function(v408) if  not v52 then return;end task.wait(826.5 -(802 + 24) );v169(v408);end);v21("Hitbox","Size set to "   .. v167 ,"success");break;end if ((0 -0)==v166) then if (v52 or (v165[1] and (v165[1 -0 ]:lower()=="off"))) then v52=false;v17.ActiveCmds['Hitbox']=nil;v25();if v53 then local v496=0 + 0 ;while true do if (v496==(0 + 0)) then v53:Disconnect();v53=nil;break;end end end local v437=v1.Character;if v437 then for v512,v513 in pairs(v54) do pcall(function() v512.Size=v513;end);end end v54={};v21("Hitbox","Restored","info");return;end v167=tonumber(v165[1]) or 8 ;v168=v1.Character;v166=1 + 0 ;end if (v166==(1 + 1)) then v25();v169=nil;function v169(v409) local v410=0 -0 ;while true do if ((0 -0)==v410) then v54={};for v514,v515 in ipairs(v409:GetDescendants()) do if (v515:IsA("BasePart") and (v515.Name~="HumanoidRootPart")) then local v556=0 + 0 ;while true do if (v556==0) then v54[v515]=v515.Size;pcall(function() v515.Size=Vector3.new(v167,v167,v167);end);break;end end end end break;end end end v166=3;end end end);local v55=false;v24("bighead",{"bh"},"Toggle big head",false,function() local v170=0;local v171;local v172;while true do if (v170==(0 + 0)) then v171=v1.Character;if  not v171 then return;end v170=1;end if ((2 + 0)==v170) then if v55 then v55=false;v17.ActiveCmds['BigHead']=nil;v25();pcall(function() v172.Size=Vector3.new(2,2,2);end);v21("BigHead","Off","info");else local v439=0;while true do if ((1 + 0)==v439) then v25();pcall(function() v172.Size=Vector3.new(1441 -(797 + 636) ,8,38 -30 );end);v439=1621 -(1427 + 192) ;end if ((0 + 0)==v439) then v55=true;v17.ActiveCmds['BigHead']=true;v439=2 -1 ;end if (v439==2) then v21("BigHead","On","success");break;end end end break;end if (v170==1) then v172=v171:FindFirstChild("Head");if  not v172 then return;end v170=2;end end end);local v56=false;v24("invisible",{"invis","inv"},"Toggle invisibility",false,function() local v173=0 + 0 ;local v174;while true do if (v173==(327 -(192 + 134))) then if v56 then local v440=1276 -(316 + 960) ;while true do if (v440==(1 + 0)) then v25();for v543,v544 in ipairs(v174:GetDescendants()) do if (v544:IsA("BasePart") or v544:IsA("Decal")) then pcall(function() v544.Transparency=(v544:IsA("Decal") and 0) or 0 ;end);end end v440=2 + 0 ;end if (2==v440) then v21("Invisible","Visible again","info");break;end if (v440==(0 + 0)) then v56=false;v17.ActiveCmds['Invisible']=nil;v440=3 -2 ;end end else v56=true;v17.ActiveCmds['Invisible']=true;v25();for v467,v468 in ipairs(v174:GetDescendants()) do if (v468:IsA("BasePart") or v468:IsA("Decal")) then pcall(function() v468.Transparency=552 -(83 + 468) ;end);end end v21("Invisible","You are now invisible","success");end break;end if (v173==(1806 -(1202 + 604))) then v174=v1.Character;if  not v174 then return;end v173=1;end end end);v24("reach",{"rc"},"Set tool reach distance  e.g. reach 20 | reach off",false,function(v175) if (v175[1] and (v175[4 -3 ]:lower()=="off")) then local v271=0 -0 ;local v272;while true do if (v271==(0 -0)) then v272=v1.Character and v1.Character:FindFirstChildOfClass("Tool") ;if v272 then local v497=325 -(45 + 280) ;local v498;while true do if (v497==(0 + 0)) then v498=v272:FindFirstChild("Handle");if v498 then pcall(function() v498.Size=Vector3.new(1 + 0 ,1 + 0 ,1);end);end break;end end end v271=1 + 0 ;end if (1==v271) then v21("Reach","Reset","info");return;end end end local v176=tonumber(v175[1 + 0 ]) or (27 -12) ;local v177=v1.Character and v1.Character:FindFirstChildOfClass("Tool") ;if  not v177 then local v273=1911 -(340 + 1571) ;while true do if (v273==(0 + 0)) then v21("Reach","Equip a tool first","warning");return;end end end local v178=v177:FindFirstChild("Handle");if v178 then pcall(function() v178.Size=Vector3.new(v176,v176,v176);end);v21("Reach","Reach set to "   .. v176 ,"success");else v21("Reach","Tool has no handle","error");end end);v24("zoom",{"zm"},"Set max camera zoom  e.g. zoom 100 | zoom off",false,function(v179) if (v179[2 -1 ] and (v179[1]:lower()=="off")) then pcall(function() v1.CameraMaxZoomDistance=1434 -(125 + 909) ;end);v21("Zoom","Reset to default","info");return;end local v180=tonumber(v179[1]) or (2048 -(1096 + 852)) ;pcall(function() v1.CameraMaxZoomDistance=v180;end);v21("Zoom","Max zoom set to "   .. v180 ,"success");end);local v57=false;v24("thirdperson",{"tp3","3p"},"Lock camera to third person",false,function() if v57 then v57=false;v17.ActiveCmds['ThirdPerson']=nil;v25();pcall(function() local v384=0 -0 ;while true do if (v384==0) then v1.CameraMinZoomDistance=0.5 + 0 ;v1.CameraMaxZoomDistance=912 -(409 + 103) ;break;end end end);v21("ThirdPerson","Off","info");else local v275=236 -(46 + 190) ;while true do if (v275==0) then v57=true;v17.ActiveCmds['ThirdPerson']=true;v275=1;end if (v275==1) then v25();pcall(function() local v471=95 -(51 + 44) ;while true do if (v471==(0 + 0)) then v1.CameraMinZoomDistance=1327 -(1114 + 203) ;v1.CameraMaxZoomDistance=736 -(228 + 498) ;break;end end end);v275=1 + 1 ;end if (v275==(2 + 0)) then v21("ThirdPerson","Locked to third person","success");break;end end end end);local v58=false;local v59=nil;v24("trail",{"tr"},"Toggle movement trail",false,function() local v181=v1.Character;local v182=v181 and v181:FindFirstChild("HumanoidRootPart") ;local v183=v181 and v181:FindFirstChild("Head") ;if ( not v182 or  not v183) then local v276=0;while true do if (v276==(0 -0)) then v21("Trail","No character","error");return;end end end if v58 then local v277=1905 -(830 + 1075) ;while true do if (v277==(524 -(303 + 221))) then v58=false;v17.ActiveCmds['Trail']=nil;v277=1270 -(231 + 1038) ;end if (v277==(2 + 0)) then v21("Trail","Off","info");break;end if (v277==(1163 -(171 + 991))) then v25();if v59 then local v499=0 -0 ;while true do if (v499==0) then pcall(function() v59:Destroy();end);v59=nil;break;end end end v277=2;end end else v58=true;v17.ActiveCmds['Trail']=true;v25();local v279=Instance.new("Attachment",v182);local v280=Instance.new("Attachment",v183);local v281=Instance.new("Trail");v281.Attachment0=v279;v281.Attachment1=v280;v281.Lifetime=0.5 -0 ;v281.MinLength=0;v281.FaceCamera=true;v281.Color=ColorSequence.new({ColorSequenceKeypoint.new(0 + 0 ,Color3.fromRGB(490 -350 ,129 -84 ,411 -156 )),ColorSequenceKeypoint.new(1248.5 -(111 + 1137) ,Color3.fromRGB(80,358 -(91 + 67) ,255)),ColorSequenceKeypoint.new(1 + 0 ,Color3.fromRGB(778 -(423 + 100) ,80,2 + 178 ))});v281.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0 + 0 ,0),NumberSequenceKeypoint.new(1,1)});v281.Parent=v182;v59=v281;v21("Trail","On","success");end end);local v60=false;local v61=nil;v24("rainbow",{"rb"},"Toggle rainbow character colors",false,function() if v60 then local v290=0;while true do if (v290==(8 -6)) then v21("Rainbow","Off","info");break;end if (v290==(0 -0)) then v60=false;v17.ActiveCmds['Rainbow']=nil;v290=2 -1 ;end if (v290==(712 -(530 + 181))) then v25();if v61 then v61:Disconnect();v61=nil;end v290=2;end end else local v291=881 -(614 + 267) ;local v292;while true do if (v291==(33 -(19 + 13))) then v25();v292=0 -0 ;v291=2;end if (v291==(0 -0)) then v60=true;v17.ActiveCmds['Rainbow']=true;v291=1;end if (v291==(5 -3)) then v61=v3.Heartbeat:Connect(function(v472) local v473=0 + 0 ;local v474;local v475;while true do if (v473==(3 -1)) then if  not v475 then return;end for v557,v558 in ipairs(v475:GetDescendants()) do if v558:IsA("BasePart") then pcall(function() v558.Color=v474;end);end end break;end if (v473==1) then v474=Color3.fromHSV(v292,1,1);v475=v1.Character;v473=3 -1 ;end if (v473==0) then if  not v60 then return;end v292=(v292 + (v472 * (1812.3 -(1293 + 519))))%(1 -0) ;v473=2 -1 ;end end end);v21("Rainbow","On","success");break;end end end end);local v62=false;v24("ghost",{"gh"},"Toggle ghost mode (semi-transparent, no collisions)",false,function() local v184=0 -0 ;local v185;while true do if (v184==0) then v185=v1.Character;if  not v185 then return;end v184=1;end if (v184==(2 -1)) then if v62 then v62=false;v17.ActiveCmds['Ghost']=nil;v25();for v476,v477 in ipairs(v185:GetDescendants()) do if v477:IsA("BasePart") then pcall(function() v477.Transparency=((v477.Name=="HumanoidRootPart") and 1) or (0 + 0) ;v477.CanCollide=v477.Name~="HumanoidRootPart" ;end);end end v21("Ghost","Off","info");else local v447=0;while true do if (v447==0) then v62=true;v17.ActiveCmds['Ghost']=true;v447=1 + 0 ;end if (v447==(4 -2)) then v21("Ghost","On - semi-transparent and no collisions","success");break;end if ((1 + 0)==v447) then v25();for v551,v552 in ipairs(v185:GetDescendants()) do if v552:IsA("BasePart") then pcall(function() local v570=0 + 0 ;while true do if (v570==(0 + 0)) then v552.Transparency=0.6;v552.CanCollide=false;break;end end end);end end v447=1098 -(709 + 387) ;end end end break;end end end);v24("hat",{"accessory"},"Equip any hat by asset ID  e.g. hat 1365767",false,function(v186) local v187=tonumber(v186[1]);if  not v187 then v21("Hat","Usage: hat <assetId>","warning");return;end local v188,v189=pcall(function() local v227=game:GetService("InsertService");local v228=v227:LoadAsset(v187);local v229=v228:FindFirstChildOfClass("Accessory") or v228:FindFirstChildOfClass("Hat") or (v228:FindFirstChild("Handle") and v228) ;if  not v229 then local v386=0 -0 ;while true do if ((0 -0)==v386) then v228:Destroy();v21("Hat","No accessory found in asset "   .. v187 ,"error");v386=1 -0 ;end if (1==v386) then return;end end end v229.Parent=v1.Character;v228:Destroy();v21("Hat","Equipped asset "   .. v187 ,"success");end);if  not v188 then v21("Hat","Failed: "   .. tostring(v189) ,"error");end end);v24("find",{"where","loc"},"Show a player's location  e.g. find Player1",false,function(v190) local v191=v22(v190[1]);if  not v191 then v21("Find","Player not found: "   .. (v190[1 -0 ] or "?") ,"error");return;end local v192=v191.Character and v191.Character:FindFirstChild("HumanoidRootPart") ;if  not v192 then local v293=0 + 0 ;while true do if (v293==(0 -0)) then v21("Find",v23(v191)   .. " has no character" ,"error");return;end end end local v193=v192.Position;v21("Find  "   .. v191.Name ,string.format("X: %.1f  Y: %.1f  Z: %.1f",v193.X,v193.Y,v193.Z),"info",11 -5 );end);v24("players",{"list","who"},"List all players in the server",false,function() local v194={};for v232,v233 in ipairs(v2:GetPlayers()) do local v234="";pcall(function() v234="  "   .. math.floor(v233:GetNetworkPing() * (2984 -1984) )   .. "ms" ;end);local v235=((v233==v1) and " (you)") or "" ;table.insert(v194,v233.DisplayName   .. " @"   .. v233.Name   .. v234   .. v235 );end v21("Players ("   ..  #v194   .. ")" ,table.concat(v194,"\n"),"info",1855 -(559 + 1288) );end);v24("copyfit",{"cf","outfit"},"Copy another player's outfit  e.g. copyfit Player1",false,function(v195) local v196=454 -(13 + 441) ;local v197;local v198;local v199;while true do if (v196==(3 -2)) then v198,v199=pcall(function() local v411=v2:GetCharacterAppearanceAsync(v197.UserId);local v412=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;if v412 then v412:ApplyDescription(v411);v21("CopyFit","Copied outfit from "   .. v197.DisplayName ,"success",10 -6 );end end);if  not v198 then v21("CopyFit","Failed: "   .. tostring(v199) ,"error");end break;end if (v196==(0 -0)) then v197=v22(v195[1]);if  not v197 then v21("CopyFit","Player not found: "   .. (v195[1] or "?") ,"error");return;end v196=1 + 0 ;end end end);v24("unequip",{"ue","drop"},"Unequip all tools",false,function() local v200=0 + 0 ;local v201;local v202;local v203;while true do if (v200==(2 -1)) then v202=v1:FindFirstChildOfClass("Backpack");v203=0 + 0 ;v200=3 -1 ;end if (2==v200) then for v413,v414 in ipairs(v201:GetChildren()) do if v414:IsA("Tool") then pcall(function() local v500=0;while true do if (v500==0) then v414.Parent=v202 or v201 ;v203=v203 + 1 + 0 ;break;end end end);end end v21("Unequip","Unequipped "   .. v203   .. " tool(s)" ,"info");break;end if (0==v200) then v201=v1.Character;if  not v201 then return;end v200=1 + 0 ;end end end);local function v63(v204) local v205=false;pcall(function() local v236=game:GetService("TextChatService");if (v236.ChatVersion==Enum.ChatVersion.TextChatService) then local v388=v236.TextChannels:FindFirstChild("RBXGeneral");if v388 then local v448=0 + 0 ;while true do if (v448==(0 + 0)) then v388:SendAsync(v204);v205=true;break;end end end end end);if  not v205 then pcall(function() local v389=game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents");local v390=v389 and v389:FindFirstChild("SayMessageRequest") ;if v390 then v390:FireServer(v204,"All");end end);end end local v64=nil;local v65=nil;local v66=nil;local function v67() local function v206(v237) if  not v18() then return;end local v238=v237:match("^%S+:%s*(.+)$") or v237 ;if (v238:sub(1 + 0 ,434 -(153 + 280) )~=".") then return;end local v239={};for v294 in v238:sub(5 -3 ):gmatch("%S+") do table.insert(v239,v294);end local v240=(v239[1] or ""):lower();if ((v240=="control") or (v240=="ctrl")) then local v391=0;local v392;local v393;while true do if ((0 + 0)==v391) then v392=v239[1 + 1 ];if  not v392 then return;end v391=1 + 0 ;end if (v391==(2 + 0)) then if v65 then v65:Disconnect();v65=nil;end v64=v393;v391=3 + 0 ;end if (v391==(5 -1)) then v21("Control","Controlling "   .. v393.DisplayName   .. "  |  .release to stop" ,"warning",5);v65=task.spawn(function() while v64 do local v519,v520=0 + 0 ,667 -(89 + 578) ;if (v4:IsKeyDown(Enum.KeyCode.W) or v4:IsKeyDown(Enum.KeyCode.Up)) then v520=v520-1 ;end if (v4:IsKeyDown(Enum.KeyCode.S) or v4:IsKeyDown(Enum.KeyCode.Down)) then v520=v520 + 1 ;end if (v4:IsKeyDown(Enum.KeyCode.A) or v4:IsKeyDown(Enum.KeyCode.Left)) then v519=v519-(1 + 0) ;end if (v4:IsKeyDown(Enum.KeyCode.D) or v4:IsKeyDown(Enum.KeyCode.Right)) then v519=v519 + 1 ;end v63(".ctrlmove "   .. v64.Name   .. " "   .. v519   .. " "   .. v520 );task.wait(0.15);end end);break;end if (v391==(5 -2)) then v17.ActiveCmds['Controlling']=v393.Name;v25();v391=1053 -(572 + 477) ;end if (v391==(1 + 0)) then v393=v22(v392);if  not v393 then v21("Control","Player not found: "   .. v392 ,"error");return;end v391=2;end end elseif (v240=="release") then local v449=0;while true do if (v449==(0 + 0)) then v64=nil;v65=nil;v449=1 + 0 ;end if (v449==1) then v17.ActiveCmds['Controlling']=nil;v25();v449=88 -(84 + 2) ;end if (v449==(2 -0)) then v21("Control","Control released","info",3);break;end end end end pcall(function() local v241=game:GetService("TextChatService");v241.MessageReceived:Connect(function(v295) if (v295.TextSource and (v295.TextSource.UserId==v1.UserId)) then v206(v295.Text);end end);end);v1.Chatted:Connect(v206);end if v18() then v67();end v24("spin_info",{},"Premium: .spin <player> in chat",true,function() v21("Spin [P]","Type .spin <player> in Roblox chat","gold");end);v24("explode_info",{},"Premium: .explode <player> in chat",true,function() v21("Explode [P]","Type .explode <player> in Roblox chat","gold");end);v24("follow_info",{},"Premium: .follow <player> / .unfollow in chat",true,function() v21("Follow [P]","Type .follow <player> in Roblox chat","gold");end);v24("tp2me_info",{},"Premium: .tp2me <player> / .tp2me <player> stop in chat",true,function() v21("TP2Me [P]","Type .tp2me <player> in Roblox chat","gold");end);local v68=false;local v69=nil;v24("looptp",{"ltp"},"Loop teleport to a player  e.g. looptp Player1 | looptp stop",false,function(v207) local v208=842 -(497 + 345) ;local v209;while true do if (v208==(1 + 2)) then v25();v21("LoopTP","Looping to "   .. v209.DisplayName   .. "  |  looptp stop to cancel" ,"success",1 + 3 );v208=1337 -(605 + 728) ;end if (v208==(1 + 0)) then if  not v209 then v21("LoopTP","Player not found: "   .. (v207[1 -0 ] or "?") ,"error");return;end v68=true;v208=1 + 1 ;end if (v208==(7 -5)) then v69=v209;v17.ActiveCmds['LoopTP']=v209.Name;v208=3 + 0 ;end if (v208==4) then task.spawn(function() while v68 and v69  do local v450=0;while true do if ((0 -0)==v450) then pcall(function() local v553=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;local v554=v69.Character and v69.Character:FindFirstChild("HumanoidRootPart") ;if (v553 and v554) then v553.CFrame=v554.CFrame * CFrame.new(math.random( -(3 + 0),492 -(457 + 32) ),0,math.random( -(2 + 1),3)) ;end end);task.wait(1402.1 -(832 + 570) );break;end end end end);break;end if (v208==0) then if ( not v207[1 + 0 ] or (v207[1 + 0 ]:lower()=="stop")) then local v451=0;while true do if (v451==(6 -4)) then v21("LoopTP","Stopped","info");return;end if (v451==(0 + 0)) then v68=false;v69=nil;v451=797 -(588 + 208) ;end if (1==v451) then v17.ActiveCmds['LoopTP']=nil;v25();v451=5 -3 ;end end end v209=v22(v207[1801 -(884 + 916) ]);v208=1;end end end);local v70=false;v24("desync",{"vd","voiddesync"},"Toggle void desync - rapidly flickers you in/out of void",false,function() local v210=653 -(232 + 421) ;local v211;while true do if (v210==(1891 -(1569 + 320))) then v17.ActiveCmds['Desync']=true;v25();v210=3;end if (v210==(1 + 0)) then if  not v211 then local v452=0;while true do if (v452==(0 + 0)) then v21("Desync","No character","error");return;end end end v70=true;v210=6 -4 ;end if (v210==(608 -(316 + 289))) then v21("Desync","On - you are desynced from the server","success");task.spawn(function() while v70 do pcall(function() local v481=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;local v482=workspace.CurrentCamera;if  not v481 then return;end local v483=v481.CFrame;local v484=v482.CFrame;v482.CameraType=Enum.CameraType.Scriptable;v482.CFrame=v484;v481.CFrame=CFrame.new(v483.X, -(2617721 -1617721),v483.Z);task.wait(0.03 + 0 );v481.CFrame=v483;v482.CameraType=Enum.CameraType.Custom;end);task.wait(1453.03 -(666 + 787) );end pcall(function() workspace.CurrentCamera.CameraType=Enum.CameraType.Custom;end);end);break;end if (v210==(425 -(360 + 65))) then if v70 then local v455=0 + 0 ;while true do if (v455==(255 -(79 + 175))) then v25();v21("Desync","Off","info");v455=2;end if (v455==(2 -0)) then return;end if (v455==(0 + 0)) then v70=false;v17.ActiveCmds['Desync']=nil;v455=2 -1 ;end end end v211=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;v210=1 -0 ;end end end);local v71=false;local v72=nil;v24("infinitejump",{"ij"},"Toggle infinite jump",false,function() if v71 then local v296=899 -(503 + 396) ;while true do if (v296==(183 -(92 + 89))) then v21("Infinite Jump","Off","info");break;end if (v296==(1 -0)) then v25();if v72 then v72:Disconnect();v72=nil;end v296=2 + 0 ;end if (v296==(0 + 0)) then v71=false;v17.ActiveCmds['InfJump']=nil;v296=3 -2 ;end end else v71=true;v17.ActiveCmds['InfJump']=true;v25();v72=v4.JumpRequest:Connect(function() local v397=0;local v398;while true do if (v397==(0 + 0)) then if  not v71 then return;end v398=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;v397=2 -1 ;end if (v397==(1 + 0)) then if v398 then v398:ChangeState(Enum.HumanoidStateType.Jumping);end break;end end end);v21("Infinite Jump","On  —  hold Space to keep jumping","success");end end);v1.CharacterAdded:Connect(function() task.wait(1 + 0 );if v30 then local v298=0;while true do if (v298==(2 -1)) then v35();break;end if (v298==(0 + 0)) then v30=false;task.wait(0.2 -0 );v298=1;end end end if v36 then v36=false;task.wait(1244.1 -(485 + 759) );v39();end if (v68 and v69) then task.spawn(function() while v68 and v69  do local v415=0 -0 ;while true do if (v415==(1189 -(442 + 747))) then pcall(function() local v524=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;local v525=v69.Character and v69.Character:FindFirstChild("HumanoidRootPart") ;if (v524 and v525) then v524.CFrame=v525.CFrame * CFrame.new(math.random( -(1138 -(832 + 303)),949 -(88 + 858) ),0,math.random( -(1 + 2),3 + 0 )) ;end end);task.wait(0.1 + 0 );break;end end end end);end if v70 then local v299=789 -(766 + 23) ;while true do if (v299==(0 -0)) then v70=false;task.wait(0.5 -0 );v299=2 -1 ;end if (v299==1) then v70=true;task.spawn(function() while v70 do pcall(function() local v526=v1.Character and v1.Character:FindFirstChild("HumanoidRootPart") ;local v527=workspace.CurrentCamera;if  not v526 then return;end local v528=v526.CFrame;local v529=v527.CFrame;v527.CameraType=Enum.CameraType.Scriptable;v527.CFrame=v529;v526.CFrame=CFrame.new(v528.X, -(3394034 -2394034),v528.Z);task.wait(0.03);v526.CFrame=v528;v527.CameraType=Enum.CameraType.Custom;end);task.wait(1073.03 -(1036 + 37) );end pcall(function() workspace.CurrentCamera.CameraType=Enum.CameraType.Custom;end);end);break;end end end if v71 then local v300=0 + 0 ;while true do if ((0 -0)==v300) then if v72 then local v503=0 + 0 ;while true do if (v503==0) then v72:Disconnect();v72=nil;break;end end end v72=v4.JumpRequest:Connect(function() local v490=1480 -(641 + 839) ;local v491;while true do if (v490==(914 -(910 + 3))) then if v491 then v491:ChangeState(Enum.HumanoidStateType.Jumping);end break;end if (v490==(0 -0)) then if  not v71 then return;end v491=v1.Character and v1.Character:FindFirstChildOfClass("Humanoid") ;v490=1;end end end);break;end end end if v40 then task.wait(1685.2 -(1466 + 218) );for v399,v400 in ipairs(v2:GetPlayers()) do task.spawn(v43,v400);end end task.wait(0.3 + 0 );if v56 then local v301=1148 -(556 + 592) ;local v302;while true do if (0==v301) then v56=false;v302=v1.Character;v301=1 + 0 ;end if (v301==1) then if v302 then for v535,v536 in ipairs(v302:GetDescendants()) do if (v536:IsA("BasePart") or v536:IsA("Decal")) then pcall(function() v536.Transparency=1;end);end end v56=true;end break;end end end if v62 then local v303=808 -(329 + 479) ;local v304;while true do if (v303==0) then v62=false;v304=v1.Character;v303=855 -(174 + 680) ;end if (v303==1) then if v304 then local v504=0 -0 ;while true do if (v504==(0 -0)) then for v567,v568 in ipairs(v304:GetDescendants()) do if v568:IsA("BasePart") then pcall(function() local v577=0;while true do if (0==v577) then v568.Transparency=0.6 + 0 ;v568.CanCollide=false;break;end end end);end end v62=true;break;end end end break;end end end if v60 then end if v55 then local v305=v1.Character and v1.Character:FindFirstChild("Head") ;if v305 then pcall(function() v305.Size=Vector3.new(747 -(396 + 343) ,1 + 7 ,8);end);end end if v58 then local v306=1477 -(29 + 1448) ;local v307;local v308;local v309;while true do if (v306==1) then v309=v307 and v307:FindFirstChild("Head") ;if (v308 and v309 and v59) then local v505=0;while true do if (v505==(1389 -(135 + 1254))) then pcall(function() v59:Destroy();end);v59=nil;v505=3 -2 ;end if (v505==(4 -3)) then v58=false;break;end end end break;end if ((0 + 0)==v306) then v307=v1.Character;v308=v307 and v307:FindFirstChild("HumanoidRootPart") ;v306=1528 -(389 + 1138) ;end end end end);
+-- ── VoidCenter: Commands module ──────────────────────────────
+local _VC = getgenv()._VC
+local LP               = _VC.LP
+local Players          = _VC.Players
+local RunService       = _VC.RunService
+local UserInputService = _VC.UserInputService
+local TweenService     = _VC.TweenService
+local MarketplaceService = _VC.MarketplaceService
+local Debris           = _VC.Debris
+local Camera           = _VC.Camera
+local C                = _VC.C
+local TF               = _VC.TF
+local TM               = _VC.TM
+local N                = _VC.N
+local Tween            = _VC.Tween
+local Corner           = _VC.Corner
+local Stroke           = _VC.Stroke
+local Pad              = _VC.Pad
+local Config           = _VC.Config
+local IsPremium        = _VC.IsPremium
+local freeIds          = _VC.freeIds
+local premIds          = _VC.premIds
+local Notify           = _VC.Notify
+local FindPlayer       = _VC.FindPlayer
+local PStr             = _VC.PStr
+local Reg              = _VC.Reg
+local RefreshActive    = _VC.RefreshActive
+local Screen           = _VC.Screen
+-- From detection module
+local vcUsers          = _VC.vcUsers
+local IsVoidUser       = _VC.IsVoidUser
+local IsWhitelisted    = _VC.IsWhitelisted
+
+-- FLY
+-- ═══════════════════════════════════════════════════════════
+local flyOn   = false
+local flyBV   = nil
+local flyBG   = nil
+local flyConn = nil
+
+local function StopFly()
+    if not flyOn then return end
+    flyOn = false
+    Config.ActiveCmds["Fly"] = nil
+    RefreshActive()
+    if flyConn then flyConn:Disconnect() flyConn = nil end
+    pcall(function() if flyBV and flyBV.Parent then flyBV:Destroy() end end) flyBV = nil
+    pcall(function() if flyBG and flyBG.Parent then flyBG:Destroy() end end) flyBG = nil
+    pcall(function()
+        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end)
+    Notify("Fly", "Landed", "info")
+end
+
+local function StartFly()
+    if flyOn then StopFly() return end
+    local c    = LP.Character
+    local root = c and c:FindFirstChild("HumanoidRootPart")
+    local hum  = c and c:FindFirstChildOfClass("Humanoid")
+    if not root or not hum then Notify("Fly", "No character", "error") return end
+
+    flyOn = true
+    Config.ActiveCmds["Fly"] = true
+    RefreshActive()
+    hum.PlatformStand = true
+
+    -- BodyGyro locks your character's rotation to the camera
+    flyBG             = Instance.new("BodyGyro", root)
+    flyBG.P           = 9e4
+    flyBG.MaxTorque   = Vector3.new(9e9, 9e9, 9e9)
+    flyBG.CFrame      = root.CFrame
+
+    -- BodyVelocity moves you in the direction you're looking
+    flyBV             = Instance.new("BodyVelocity", root)
+    flyBV.MaxForce    = Vector3.new(9e9, 9e9, 9e9)
+    flyBV.Velocity    = Vector3.zero
+
+    flyConn = RunService.RenderStepped:Connect(function()
+        local chr = LP.Character
+        if not chr then return end
+        local rt  = chr:FindFirstChild("HumanoidRootPart")
+        if not rt or not flyBV or not flyBV.Parent then return end
+
+        local cam   = workspace.CurrentCamera
+        local speed = Config.FlySpeed
+        local move  = Vector3.zero
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space)
+        or UserInputService:IsKeyDown(Enum.KeyCode.ButtonA) then
+            move = move + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+        or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            move = move - Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.E) then speed = speed * 2.5 end
+
+        flyBV.Velocity = move.Magnitude > 0 and move.Unit * speed or Vector3.zero
+        flyBG.CFrame   = cam.CFrame  -- character faces where you look
+    end)
+
+    Notify("Fly", "WASD to move  Space/Ctrl up-down  E to boost  fly again to land", "success")
+end
+
+Reg("fly",      {"f"},  "Toggle fly", false, function() StartFly() end)
+Reg("flyspeed", {"fs"}, "Set fly speed  e.g. flyspeed 80", false, function(a)
+    local n = tonumber(a[1])
+    if n and n > 0 then
+        Config.FlySpeed = n
+        Notify("Fly", "Speed set to " .. n, "success")
+    else
+        Notify("Fly", "Usage: flyspeed <number>", "warning")
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- NOCLIP
+-- ═══════════════════════════════════════════════════════════
+local ncOn   = false
+local ncConn
+
+local function StopNoclip()
+    if not ncOn then return end
+    ncOn = false
+    Config.ActiveCmds["Noclip"] = nil
+    RefreshActive()
+    if ncConn then ncConn:Disconnect() ncConn = nil end
+    local c = LP.Character
+    if c then
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = true end
+        end
+    end
+    Notify("Noclip","Collision restored","info")
+end
+
+local function StartNoclip()
+    if ncOn then StopNoclip() return end
+    ncOn = true
+    Config.ActiveCmds["Noclip"] = true
+    RefreshActive()
+    ncConn = RunService.Stepped:Connect(function()
+        if not ncOn then return end
+        local c = LP.Character
+        if not c then return end
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    end)
+    Notify("Noclip","Phase through walls - run again to stop","success")
+end
+
+Reg("noclip", {"nc"}, "Toggle noclip / phase through walls", false, function() StartNoclip() end)
+
+-- ═══════════════════════════════════════════════════════════
+-- ESP - always maintains all players, auto-updates
+-- ═══════════════════════════════════════════════════════════
+local espOn   = false
+local espData = {}   -- [player] = { hl, bill, hconn }
+
+local function RemoveESPFor(player)
+    if espData[player] then
+        pcall(function() espData[player].hl:Destroy()   end)
+        pcall(function() espData[player].bill:Destroy() end)
+        if espData[player].hconn then
+            pcall(function() espData[player].hconn:Disconnect() end)
+        end
+        espData[player] = nil
+    end
+end
+
+local function BuildESPFor(player)
+    if player == LP then return end
+    RemoveESPFor(player)
+
+    local c    = player.Character
+    local root = c and c:FindFirstChild("HumanoidRootPart")
+    if not c or not root then return end
+
+    -- Box highlight
+    local hl = Instance.new("Highlight")
+    hl.FillColor           = Color3.fromRGB(55,0,110)
+    hl.OutlineColor        = Color3.fromRGB(160,50,255)
+    hl.FillTransparency    = 0.80
+    hl.OutlineTransparency = 0.0
+    hl.Adornee             = c
+    hl.Parent              = c
+
+    -- Names + health billboard
+    local bill = Instance.new("BillboardGui")
+    bill.Name         = "VESP_"..player.Name
+    bill.Size         = UDim2.new(0,200,0,68)
+    bill.StudsOffset  = Vector3.new(0,3.5,0)
+    bill.AlwaysOnTop  = true
+    bill.Parent       = root
+
+    N("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1,0,0,28),
+        Font = Enum.Font.GothamBold,
+        Text = player.DisplayName,
+        TextColor3 = Color3.fromRGB(215,165,255),
+        TextSize = 20,
+        TextStrokeTransparency = 0.2, TextStrokeColor3 = C.Black,
+    }, bill)
+    N("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0,0,0,27), Size = UDim2.new(1,0,0,20),
+        Font = Enum.Font.Gotham, Text = "@"..player.Name,
+        TextColor3 = Color3.fromRGB(185,135,255), TextSize = 16,
+        TextStrokeTransparency = 0.3, TextStrokeColor3 = C.Black,
+    }, bill)
+
+    -- Health bar
+    local hbg = N("Frame", {
+        BackgroundColor3 = Color3.fromRGB(18,0,36), BorderSizePixel = 0,
+        Position = UDim2.new(1,6,0.06,0), Size = UDim2.new(0,5,0.88,0),
+    }, bill)
+    Corner(4, hbg)
+    local hfill = N("Frame", {
+        AnchorPoint = Vector2.new(0,1),
+        BackgroundColor3 = Color3.fromRGB(120,40,255), BorderSizePixel = 0,
+        Position = UDim2.new(0,0,1,0), Size = UDim2.new(1,0,1,0),
+    }, hbg)
+    Corner(4, hfill)
+
+    local hum   = c:FindFirstChildOfClass("Humanoid")
+    local hconn = nil
+    if hum then
+        local function UpdateHP(hp)
+            if not espData[player] then return end
+            local pct = math.clamp(hp / math.max(hum.MaxHealth,1), 0, 1)
+            Tween(hfill, TF, {
+                Size             = UDim2.new(1,0,pct,0),
+                Position         = UDim2.new(0,0,1-pct,0),
+                BackgroundColor3 = Color3.fromRGB(
+                    math.floor(255*(1-pct)),
+                    math.floor(180*pct),
+                    math.floor(255*pct)
+                ),
+            })
+        end
+        UpdateHP(hum.Health)
+        hconn = hum.HealthChanged:Connect(UpdateHP)
+    end
+
+    espData[player] = {hl = hl, bill = bill, hconn = hconn}
+end
+
+-- ── Persistent maintenance loop: checks every 1.5 s ──────
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if not espOn then continue end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p == LP then continue end
+            local c    = p.Character
+            local root = c and c:FindFirstChild("HumanoidRootPart")
+
+            if not c or not root then
+                RemoveESPFor(p)
+            elseif not espData[p]
+                or not espData[p].hl
+                or not espData[p].hl.Parent
+                or espData[p].hl.Adornee ~= c then
+                task.spawn(BuildESPFor, p)
+            end
+        end
+        -- Remove entries for players who left
+        for p in pairs(espData) do
+            if not p or not p.Parent then
+                RemoveESPFor(p)
+            end
+        end
+    end
+end)
+
+-- Instant rebuild on character spawn
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        task.wait(1.2)
+        if espOn then BuildESPFor(p) end
+    end)
+end)
+Players.PlayerRemoving:Connect(function(p) RemoveESPFor(p) end)
+
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LP then
+        p.CharacterAdded:Connect(function()
+            task.wait(1.2)
+            if espOn then BuildESPFor(p) end
+        end)
+    end
+end
+
+local function EnableESP()
+    espOn = true
+    Config.ActiveCmds["ESP"] = true
+    RefreshActive()
+    -- Spawn each build separately so instance creation doesn't freeze the game
+    for _, p in ipairs(Players:GetPlayers()) do
+        task.spawn(BuildESPFor, p)
+    end
+    Notify("ESP","Tracking "..tostring(#Players:GetPlayers()-1).." player(s) - auto-updates","success")
+end
+
+local function DisableESP()
+    espOn = false
+    Config.ActiveCmds["ESP"] = nil
+    RefreshActive()
+    for p in pairs(espData) do RemoveESPFor(p) end
+    Notify("ESP","Disabled","info")
+end
+
+Reg("esp", {"e"}, "Toggle ESP (box - names - health - auto-updates)", false, function()
+    if espOn then DisableESP() else EnableESP() end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- PREMIUM COMMANDS  (type directly in Roblox chat)
+-- ─────────────────────────────────────────────────────────
+-- Premium users just type .fling Player1 in chat.
+-- The target's script sees it and executes locally.
+-- No signals, no encoding, no suppression needed.
+--
+-- Available commands:
+--   .fling <player>
+--   .bring <player>
+--   .bringall
+--   .freeze <player>
+--   .unfreeze <player>
+--   .kill <player>
+--   .kick <player>
+--   .unkick <player>
+--   .chat <player> <message>
+-- ═══════════════════════════════════════════════════════════
+
+-- Notify premium user that the command was typed
+-- (the actual execution happens on the target's client via detection.lua)
+Reg("prem",  {"premium","pcmds"}, "List premium dot-commands (type in Roblox chat)", true, function()
+    Notify("Premium Commands",
+        ".fling .bring .bringall .freeze .unfreeze .kill .kick .unkick .chat",
+        "gold", 8)
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- FREE UTILITY COMMANDS
+-- ═══════════════════════════════════════════════════════════
+Reg("goto", {"tp","go"}, "Teleport to player  e.g. goto Player1 or goto DisplayName", false, function(a)
+    local t = FindPlayer(a[1])
+    if not t then Notify("Goto","Not found: "..(a[1] or "?"),"error") return end
+    local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    local tr = t.Character  and t.Character:FindFirstChild("HumanoidRootPart")
+    if mr and tr then
+        mr.CFrame = tr.CFrame + Vector3.new(3,0,0)
+        Notify("Goto","--> "..PStr(t),"success")
+    else
+        Notify("Goto","Target has no character","error")
+    end
+end)
+
+Reg("walkspeed", {"ws","speed"}, "Set your walk speed  e.g. walkspeed 30", false, function(a)
+    local n = tonumber(a[1]) or 16
+    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed = n Notify("WalkSpeed","Speed -> "..n,"success") end
+end)
+
+Reg("jumppower", {"jp"}, "Set your jump power  e.g. jumppower 80", false, function(a)
+    local n = tonumber(a[1]) or 50
+    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if h then h.JumpPower = n Notify("JumpPower","Power -> "..n,"success") end
+end)
+
+Reg("resetstats", {"rss"}, "Reset your speed and jump to default", false, function()
+    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if h then
+        h.WalkSpeed = 16
+        h.JumpPower = 50
+        Notify(" ResetStats","Speed & jump reset to default","info")
+    end
+end)
+
+-- Safe platform - built once, shared between all VC users who use the command
+local safePlatform = nil
+local SAFE_POS     = Vector3.new(0, 5000, 0)
+
+local function BuildSafePlatform()
+    -- Check if it already exists in Workspace
+    local existing = workspace:FindFirstChild("VoidSafePlatform")
+    if existing then safePlatform = existing return end
+
+    local model = Instance.new("Model")
+    model.Name = "VoidSafePlatform"
+
+    -- Main floor - large purple platform
+    local floor = Instance.new("Part")
+    floor.Name          = "Floor"
+    floor.Size          = Vector3.new(60, 2, 60)
+    floor.Position      = SAFE_POS
+    floor.Anchored      = true
+    floor.CanCollide    = true
+    floor.Material      = Enum.Material.SmoothPlastic
+    floor.Color         = Color3.fromRGB(80, 0, 120)    -- deep purple
+    floor.Parent        = model
+
+    -- Black border trim around edge
+    local border = Instance.new("Part")
+    border.Name       = "Border"
+    border.Size       = Vector3.new(64, 1, 64)
+    border.Position   = SAFE_POS - Vector3.new(0, 0.5, 0)
+    border.Anchored   = true
+    border.CanCollide = false
+    border.Material   = Enum.Material.SmoothPlastic
+    border.Color      = Color3.fromRGB(10, 0, 20)       -- near black
+    border.Parent     = model
+
+    -- Glowing purple surface light
+    local light = Instance.new("SurfaceLight")
+    light.Brightness = 3
+    light.Color      = Color3.fromRGB(150, 0, 255)
+    light.Range      = 40
+    light.Face       = Enum.NormalId.Top
+    light.Parent     = floor
+
+    -- Small sign
+    local sign = Instance.new("Part")
+    sign.Name     = "Sign"
+    sign.Size     = Vector3.new(8, 3, 0.5)
+    sign.Position = SAFE_POS + Vector3.new(0, 2.5, -28)
+    sign.Anchored = true
+    sign.CanCollide = false
+    sign.Material = Enum.Material.SmoothPlastic
+    sign.Color    = Color3.fromRGB(30, 0, 60)
+    sign.Parent   = model
+
+    local sg = Instance.new("SurfaceGui")
+    sg.Face   = Enum.NormalId.Front
+    sg.Parent = sign
+    local lbl = Instance.new("TextLabel")
+    lbl.Size                 = UDim2.new(1,0,1,0)
+    lbl.BackgroundColor3     = Color3.fromRGB(30,0,60)
+    lbl.TextColor3           = Color3.fromRGB(200,100,255)
+    lbl.Font                 = Enum.Font.GothamBold
+    lbl.Text                 = "  VoidCenter Safe Zone  "
+    lbl.TextScaled           = true
+    lbl.Parent               = sg
+
+    model.Parent    = workspace
+    model.PrimaryPart = floor
+    safePlatform    = model
+end
+
+local safeReturnCF = nil  -- stores position before going to safe zone
+
+Reg("safe", {"sz"}, "Teleport to safe platform  |  type again to return", false, function()
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not r then return end
+
+    local atSafe = math.abs(r.Position.Y - SAFE_POS.Y) < 200
+
+    if atSafe and safeReturnCF then
+        -- Already at safe zone — teleport back to where we came from
+        r.CFrame = safeReturnCF
+        safeReturnCF = nil
+        Notify("Safe Zone", "Returned to previous location", "info", 3)
+    else
+        -- Save current position then go to safe zone
+        safeReturnCF = r.CFrame
+        BuildSafePlatform()
+        r.CFrame = CFrame.new(SAFE_POS + Vector3.new(math.random(-20,20), 4, math.random(-20,20)))
+        Notify("Safe Zone", "At safe platform  |  type 'safe' again to return", "success", 4)
+    end
+end)
+
+Reg("reset", {"rme","r"}, "Reset your own character", false, function()
+    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if h then
+        h.Health = 0
+        Notify("Reset","Resetting your character...","info",2)
+    end
+end)
+
+Reg("antiafk", {"aafk"}, "Toggle anti-AFK (prevents auto-kick)", false, function()
+    if Config.ActiveCmds["AntiAFK"] then
+        Config.ActiveCmds["AntiAFK"] = nil
+        RefreshActive()
+        Notify("Anti-AFK","Disabled","info")
+    else
+        Config.ActiveCmds["AntiAFK"] = true
+        RefreshActive()
+        Notify("Anti-AFK","Enabled - you will not be kicked for AFK","success")
+        task.spawn(function()
+            local VirtualUser = game:GetService("VirtualUser")
+            while Config.ActiveCmds["AntiAFK"] do
+                task.wait(60)
+                if Config.ActiveCmds["AntiAFK"] then
+                    pcall(function() VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame) end)
+                    task.wait(1)
+                    pcall(function() VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame) end)
+                end
+            end
+        end)
+    end
+end)
+
+local aflConn  -- stored so we can disconnect cleanly
+Reg("antifling", {"afl"}, "Toggle anti-fling - others phase through you", false, function()
+    if Config.ActiveCmds["AntiFling"] then
+        -- TURN OFF
+        Config.ActiveCmds["AntiFling"] = nil
+        if aflConn then aflConn:Disconnect() aflConn = nil end
+        RefreshActive()
+        -- Only restore CanCollide if noclip is NOT also running
+        -- (noclip manages its own CanCollide via its own connection)
+        if not ncOn then
+            pcall(function()
+                local chr = LP.Character
+                if chr then
+                    for _, p in ipairs(chr:GetDescendants()) do
+                        if p:IsA("BasePart") then p.CanCollide = true end
+                    end
+                end
+            end)
+        end
+        Notify("Anti-Fling", "Disabled", "info")
+    else
+        -- TURN ON - use RunService.Stepped (same as noclip) for consistency
+        Config.ActiveCmds["AntiFling"] = true
+        RefreshActive()
+        Notify("Anti-Fling", "Enabled - players phase through you", "success")
+        aflConn = RunService.Stepped:Connect(function()
+            pcall(function()
+                local chr = LP.Character
+                if not chr then return end
+                for _, p in ipairs(chr:GetDescendants()) do
+                    -- Disable collision on ALL parts including HRP -
+                    -- HRP is the handle exploiters grab to fling you
+                    if p:IsA("BasePart") then
+                        p.CanCollide = false
+                    end
+                end
+            end)
+        end)
+    end
+end)
+
+Reg("antivoid", {"av"}, "Toggle anti-void protection", false, function()
+    if Config.ActiveCmds["AntiVoid"] then
+        Config.ActiveCmds["AntiVoid"] = nil
+        RefreshActive()
+        Notify("Anti-Void", "Disabled", "info")
+    else
+        Config.ActiveCmds["AntiVoid"] = true
+        RefreshActive()
+
+        -- Read the game's actual void kill height. Every Roblox game has this property.
+        -- We trigger 30 studs above it so we always save before the void kills us.
+        local voidKillY = -500
+        pcall(function()
+            voidKillY = workspace.FallenPartsDestroyHeight
+        end)
+        local triggerY = voidKillY + 30   -- save 30 studs before death line
+
+        -- Where to teleport back to: record a safe Y on the ground when enabled.
+        local safeY = 100
+        pcall(function()
+            local chr = LP.Character
+            local r   = chr and chr:FindFirstChild("HumanoidRootPart")
+            if r then safeY = math.max(r.Position.Y + 10, 10) end
+        end)
+
+        Notify("Anti-Void", "Enabled  (trigger: Y < "..math.floor(triggerY)..")", "success")
+
+        local cooldown = false
+        task.spawn(function()
+            while Config.ActiveCmds["AntiVoid"] do
+                task.wait(0.04)
+                pcall(function()
+                    local chr = LP.Character
+                    local r   = chr and chr:FindFirstChild("HumanoidRootPart")
+                    local h   = chr and chr:FindFirstChildOfClass("Humanoid")
+                    if not r or not h or cooldown then return end
+                    if h.Health <= 0 then return end
+                    if r.Position.Y < triggerY then
+                        cooldown  = true
+                        h.Health  = h.MaxHealth
+                        r.CFrame  = CFrame.new(r.Position.X, safeY, r.Position.Z)
+                        Notify("Anti-Void", "Saved!", "success", 3)
+                        task.wait(1.5)
+                        cooldown = false
+                        -- Update safeY after each save in case map has changed
+                        pcall(function()
+                            local chr2 = LP.Character
+                            local r2 = chr2 and chr2:FindFirstChild("HumanoidRootPart")
+                            if r2 then safeY = math.max(r2.Position.Y + 10, 10) end
+                        end)
+                    end
+                end)
+            end
+        end)
+    end
+end)
+
+Reg("spectate", {"spec","view"}, "Spectate a player  e.g. spectate Player1 | spectate stop", false, function(a)
+    if not a[1] or a[1]:lower() == "stop" then
+        -- Exit spectate: restore camera
+        local cam = workspace.CurrentCamera
+        cam.CameraType = Enum.CameraType.Custom
+        cam.CameraSubject = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        Config.ActiveCmds["Spectating"] = nil
+        RefreshActive()
+        Notify("Spectate","Camera restored","info",3)
+        return
+    end
+    local t = FindPlayer(a[1])
+    if not t then Notify("Spectate","Player not found: "..(a[1] or "?"),"error") return end
+    if t == LP then Notify("Spectate","Can't spectate yourself","warning") return end
+    local th = t.Character and t.Character:FindFirstChildOfClass("Humanoid")
+    if not th then Notify("Spectate",PStr(t).." has no character","error") return end
+    local cam = workspace.CurrentCamera
+    cam.CameraType    = Enum.CameraType.Custom
+    cam.CameraSubject = th
+    Config.ActiveCmds["Spectating"] = true
+    RefreshActive()
+    Notify("Spectate","Now viewing "..PStr(t).."\nType 'spectate stop' to exit","success",4)
+    -- Auto-follow if they respawn
+    t.CharacterAdded:Connect(function(char)
+        if not Config.ActiveCmds["Spectating"] then return end
+        task.wait(0.5)
+        local newHum = char:FindFirstChildOfClass("Humanoid")
+        if newHum then cam.CameraSubject = newHum end
+    end)
+end)
+
+Reg("rejoin", {"rj"}, "Rejoin the current game", false, function()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
+end)
+
+Reg("help", {"cmds","commands"}, "List all commands", false, function()
+    Notify("Utility",
+        "fly / flyspeed / noclip / esp / goto / safe / reset\nwalkspeed / jumppower / resetstats / rejoin / spectate",
+        "info", 8)
+    task.wait(0.5)
+    Notify("Visual",
+        "trail / rainbow / ghost / invisible / bighead / nametag",
+        "info", 8)
+    task.wait(0.5)
+    Notify("Combat & Tools",
+        "hitbox / reach / zoom / thirdperson / hat / unequip",
+        "info", 8)
+    task.wait(0.5)
+    Notify("Info",
+        "find / players / copyfit / antiafk / antifling / antivoid",
+        "info", 8)
+    task.wait(0.5)
+    if IsPremium() then
+        Notify("Premium [P]  (type in Roblox chat)",
+            ".fling .bring .bringall .freeze .unfreeze\n.kill .kick .unkick .spin .explode\n.follow .unfollow .tp2me .untp2me .chat",
+            "gold", 10)
+    else
+        Notify("Premium",
+            "Get whitelisted for Premium to unlock troll commands.",
+            "gold", 6)
+    end
+end)
+
+
+-- ═══════════════════════════════════════════════════════════
+-- NEW COMMANDS
+-- ═══════════════════════════════════════════════════════════
+
+-- ── NAMETAG ───────────────────────────────────────────────
+local nametagBill = nil
+Reg("nametag", {"nt"}, "Set a custom tag above your head  e.g. nametag cool guy | nametag off", false, function(a)
+    if nametagBill then pcall(function() nametagBill:Destroy() end) nametagBill = nil end
+    local text = table.concat(a, " ")
+    if text == "" or text:lower() == "off" then
+        Notify("Nametag", "Removed", "info") return
+    end
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not root then Notify("Nametag", "No character", "error") return end
+    local bill = Instance.new("BillboardGui")
+    bill.Size = UDim2.new(0, 200, 0, 30)
+    bill.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
+    bill.AlwaysOnTop = true
+    bill.LightInfluence = 0
+    bill.MaxDistance = 0
+    bill.Parent = root
+    local lbl = Instance.new("TextLabel")
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1,0,1,0)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = text
+    lbl.TextColor3 = C.AcctBr
+    lbl.TextSize = 14
+    lbl.TextStrokeTransparency = 0.3
+    lbl.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+    lbl.Parent = bill
+    nametagBill = bill
+    -- Rebuild on respawn
+    LP.CharacterAdded:Connect(function(char)
+        if not nametagBill then return end
+        task.wait(1)
+        local r2 = char:FindFirstChild("HumanoidRootPart")
+        if r2 then bill.Parent = r2 end
+    end)
+    Notify("Nametag", "Set to: "..text, "success")
+end)
+
+-- ── HITBOX ────────────────────────────────────────────────
+local hitboxOn = false
+local hitboxConn = nil
+local origSizes = {}
+Reg("hitbox", {"hb"}, "Expand your hitbox  e.g. hitbox 10 | hitbox off", false, function(a)
+    if hitboxOn or (a[1] and a[1]:lower() == "off") then
+        hitboxOn = false
+        Config.ActiveCmds["Hitbox"] = nil RefreshActive()
+        if hitboxConn then hitboxConn:Disconnect() hitboxConn = nil end
+        local c = LP.Character
+        if c then
+            for part, sz in pairs(origSizes) do
+                pcall(function() part.Size = sz end)
+            end
+        end
+        origSizes = {}
+        Notify("Hitbox", "Restored", "info") return
+    end
+    local size = tonumber(a[1]) or 8
+    local c = LP.Character
+    if not c then Notify("Hitbox", "No character", "error") return end
+    hitboxOn = true
+    Config.ActiveCmds["Hitbox"] = true RefreshActive()
+    local function applyHitbox(char)
+        origSizes = {}
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
+                origSizes[p] = p.Size
+                pcall(function() p.Size = Vector3.new(size, size, size) end)
+            end
+        end
+    end
+    applyHitbox(c)
+    hitboxConn = LP.CharacterAdded:Connect(function(char)
+        if not hitboxOn then return end
+        task.wait(0.5) applyHitbox(char)
+    end)
+    Notify("Hitbox", "Size set to "..size, "success")
+end)
+
+-- ── BIGHEAD ───────────────────────────────────────────────
+local bigheadOn = false
+Reg("bighead", {"bh"}, "Toggle big head", false, function()
+    local c = LP.Character
+    if not c then return end
+    local head = c:FindFirstChild("Head")
+    if not head then return end
+    if bigheadOn then
+        bigheadOn = false
+        Config.ActiveCmds["BigHead"] = nil RefreshActive()
+        pcall(function() head.Size = Vector3.new(2,2,2) end)
+        Notify("BigHead", "Off", "info")
+    else
+        bigheadOn = true
+        Config.ActiveCmds["BigHead"] = true RefreshActive()
+        pcall(function() head.Size = Vector3.new(8,8,8) end)
+        Notify("BigHead", "On", "success")
+    end
+end)
+
+-- ── INVISIBLE ─────────────────────────────────────────────
+local invisOn = false
+Reg("invisible", {"invis","inv"}, "Toggle invisibility", false, function()
+    local c = LP.Character
+    if not c then return end
+    if invisOn then
+        invisOn = false
+        Config.ActiveCmds["Invisible"] = nil RefreshActive()
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") or p:IsA("Decal") then
+                pcall(function() p.Transparency = p:IsA("Decal") and 0 or 0 end)
+            end
+        end
+        -- Force re-render by briefly unequipping
+        Notify("Invisible", "Visible again", "info")
+    else
+        invisOn = true
+        Config.ActiveCmds["Invisible"] = true RefreshActive()
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") or p:IsA("Decal") then
+                pcall(function() p.Transparency = 1 end)
+            end
+        end
+        Notify("Invisible", "You are now invisible", "success")
+    end
+end)
+
+-- ── REACH ─────────────────────────────────────────────────
+Reg("reach", {"rc"}, "Set tool reach distance  e.g. reach 20 | reach off", false, function(a)
+    if a[1] and a[1]:lower() == "off" then
+        local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
+        if tool then
+            local handle = tool:FindFirstChild("Handle")
+            if handle then pcall(function() handle.Size = Vector3.new(1,1,1) end) end
+        end
+        Notify("Reach", "Reset", "info") return
+    end
+    local dist = tonumber(a[1]) or 15
+    local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
+    if not tool then Notify("Reach", "Equip a tool first", "warning") return end
+    local handle = tool:FindFirstChild("Handle")
+    if handle then
+        pcall(function() handle.Size = Vector3.new(dist, dist, dist) end)
+        Notify("Reach", "Reach set to "..dist, "success")
+    else
+        Notify("Reach", "Tool has no handle", "error")
+    end
+end)
+
+-- ── ZOOM ──────────────────────────────────────────────────
+Reg("zoom", {"zm"}, "Set max camera zoom  e.g. zoom 100 | zoom off", false, function(a)
+    if a[1] and a[1]:lower() == "off" then
+        pcall(function() LP.CameraMaxZoomDistance = 400 end)
+        Notify("Zoom", "Reset to default", "info") return
+    end
+    local dist = tonumber(a[1]) or 100
+    pcall(function() LP.CameraMaxZoomDistance = dist end)
+    Notify("Zoom", "Max zoom set to "..dist, "success")
+end)
+
+-- ── THIRDPERSON ───────────────────────────────────────────
+local tpOn = false
+Reg("thirdperson", {"tp3","3p"}, "Lock camera to third person", false, function()
+    if tpOn then
+        tpOn = false
+        Config.ActiveCmds["ThirdPerson"] = nil RefreshActive()
+        pcall(function()
+            LP.CameraMinZoomDistance = 0.5
+            LP.CameraMaxZoomDistance = 400
+        end)
+        Notify("ThirdPerson", "Off", "info")
+    else
+        tpOn = true
+        Config.ActiveCmds["ThirdPerson"] = true RefreshActive()
+        pcall(function()
+            LP.CameraMinZoomDistance = 10
+            LP.CameraMaxZoomDistance = 10
+        end)
+        Notify("ThirdPerson", "Locked to third person", "success")
+    end
+end)
+
+-- ── TRAIL ─────────────────────────────────────────────────
+local trailOn = false
+local trailObj = nil
+Reg("trail", {"tr"}, "Toggle movement trail", false, function()
+    local c = LP.Character
+    local root = c and c:FindFirstChild("HumanoidRootPart")
+    local head = c and c:FindFirstChild("Head")
+    if not root or not head then Notify("Trail", "No character", "error") return end
+    if trailOn then
+        trailOn = false
+        Config.ActiveCmds["Trail"] = nil RefreshActive()
+        if trailObj then pcall(function() trailObj:Destroy() end) trailObj = nil end
+        Notify("Trail", "Off", "info")
+    else
+        trailOn = true
+        Config.ActiveCmds["Trail"] = true RefreshActive()
+        local a0 = Instance.new("Attachment", root)
+        local a1 = Instance.new("Attachment", head)
+        local trail = Instance.new("Trail")
+        trail.Attachment0 = a0
+        trail.Attachment1 = a1
+        trail.Lifetime = 0.5
+        trail.MinLength = 0
+        trail.FaceCamera = true
+        trail.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB(140,45,255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80,200,255)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB(255,80,180)),
+        })
+        trail.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        trail.Parent = root
+        trailObj = trail
+        Notify("Trail", "On", "success")
+    end
+end)
+
+-- ── RAINBOW ───────────────────────────────────────────────
+local rainbowOn = false
+local rainbowConn = nil
+Reg("rainbow", {"rb"}, "Toggle rainbow character colors", false, function()
+    if rainbowOn then
+        rainbowOn = false
+        Config.ActiveCmds["Rainbow"] = nil RefreshActive()
+        if rainbowConn then rainbowConn:Disconnect() rainbowConn = nil end
+        Notify("Rainbow", "Off", "info")
+    else
+        rainbowOn = true
+        Config.ActiveCmds["Rainbow"] = true RefreshActive()
+        local hue = 0
+        rainbowConn = RunService.Heartbeat:Connect(function(dt)
+            if not rainbowOn then return end
+            hue = (hue + dt * 0.3) % 1
+            local col = Color3.fromHSV(hue, 1, 1)
+            local c = LP.Character
+            if not c then return end
+            for _, p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    pcall(function() p.Color = col end)
+                end
+            end
+        end)
+        Notify("Rainbow", "On", "success")
+    end
+end)
+
+-- ── GHOST ─────────────────────────────────────────────────
+local ghostOn = false
+Reg("ghost", {"gh"}, "Toggle ghost mode (semi-transparent, no collisions)", false, function()
+    local c = LP.Character
+    if not c then return end
+    if ghostOn then
+        ghostOn = false
+        Config.ActiveCmds["Ghost"] = nil RefreshActive()
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                pcall(function()
+                    p.Transparency = p.Name == "HumanoidRootPart" and 1 or 0
+                    p.CanCollide = p.Name ~= "HumanoidRootPart"
+                end)
+            end
+        end
+        Notify("Ghost", "Off", "info")
+    else
+        ghostOn = true
+        Config.ActiveCmds["Ghost"] = true RefreshActive()
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                pcall(function()
+                    p.Transparency = 0.6
+                    p.CanCollide = false
+                end)
+            end
+        end
+        Notify("Ghost", "On - semi-transparent and no collisions", "success")
+    end
+end)
+
+-- ── HAT ───────────────────────────────────────────────────
+Reg("hat", {"accessory"}, "Equip any hat by asset ID  e.g. hat 1365767", false, function(a)
+    local id = tonumber(a[1])
+    if not id then Notify("Hat", "Usage: hat <assetId>", "warning") return end
+    local ok, err = pcall(function()
+        local ins = game:GetService("InsertService")
+        local model = ins:LoadAsset(id)
+        local hat = model:FindFirstChildOfClass("Accessory")
+            or model:FindFirstChildOfClass("Hat")
+            or model:FindFirstChild("Handle") and model
+        if not hat then model:Destroy() Notify("Hat", "No accessory found in asset "..id, "error") return end
+        hat.Parent = LP.Character
+        model:Destroy()
+        Notify("Hat", "Equipped asset "..id, "success")
+    end)
+    if not ok then Notify("Hat", "Failed: "..tostring(err), "error") end
+end)
+
+-- ── FIND ──────────────────────────────────────────────────
+Reg("find", {"where","loc"}, "Show a player's location  e.g. find Player1", false, function(a)
+    local t = FindPlayer(a[1])
+    if not t then Notify("Find", "Player not found: "..(a[1] or "?"), "error") return end
+    local root = t.Character and t.Character:FindFirstChild("HumanoidRootPart")
+    if not root then Notify("Find", PStr(t).." has no character", "error") return end
+    local p = root.Position
+    Notify("Find  "..t.Name,
+        string.format("X: %.1f  Y: %.1f  Z: %.1f", p.X, p.Y, p.Z),
+        "info", 6)
+end)
+
+-- ── PLAYERS ───────────────────────────────────────────────
+Reg("players", {"list","who"}, "List all players in the server", false, function()
+    local lines = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        local ping = ""
+        pcall(function()
+            ping = "  "..math.floor(p:GetNetworkPing()*1000).."ms"
+        end)
+        local tag = p == LP and " (you)" or ""
+        table.insert(lines, p.DisplayName.." @"..p.Name..ping..tag)
+    end
+    Notify("Players ("..#lines..")", table.concat(lines, "\n"), "info", 8)
+end)
+
+-- ── COPYFIT ───────────────────────────────────────────────
+Reg("copyfit", {"cf","outfit"}, "Copy another player's outfit  e.g. copyfit Player1", false, function(a)
+    local t = FindPlayer(a[1])
+    if not t then Notify("CopyFit", "Player not found: "..(a[1] or "?"), "error") return end
+    local ok, err = pcall(function()
+        local desc = Players:GetCharacterAppearanceAsync(t.UserId)
+        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ApplyDescription(desc)
+            Notify("CopyFit", "Copied outfit from "..t.DisplayName, "success", 4)
+        end
+    end)
+    if not ok then Notify("CopyFit", "Failed: "..tostring(err), "error") end
+end)
+
+-- ── UNEQUIP ───────────────────────────────────────────────
+Reg("unequip", {"ue","drop"}, "Unequip all tools", false, function()
+    local c = LP.Character
+    if not c then return end
+    local bp = LP:FindFirstChildOfClass("Backpack")
+    local count = 0
+    for _, tool in ipairs(c:GetChildren()) do
+        if tool:IsA("Tool") then
+            pcall(function()
+                tool.Parent = bp or c
+                count = count + 1
+            end)
+        end
+    end
+    Notify("Unequip", "Unequipped "..count.." tool(s)", "info")
+end)
+
+-- ── Chat sender helper (used by control loop) ────────────────
+local function SendChat(msg)
+    local sent = false
+    pcall(function()
+        local tcs = game:GetService("TextChatService")
+        if tcs.ChatVersion == Enum.ChatVersion.TextChatService then
+            local ch = tcs.TextChannels:FindFirstChild("RBXGeneral")
+            if ch then ch:SendAsync(msg) sent = true end
+        end
+    end)
+    if not sent then pcall(function()
+        local ev  = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+        local sr  = ev and ev:FindFirstChild("SayMessageRequest")
+        if sr then sr:FireServer(msg, "All") end
+    end) end
+end
+
+-- ── PREMIUM: CONTROL ──────────────────────────────────────────
+-- Premium user types .control <player> in chat to start.
+-- Their script reads WASD and sends .ctrlmove x z signals every 0.1s.
+-- .release ends it on the target's side.
+local controlTarget   = nil
+local controlConn     = nil
+local controlChatConn = nil
+
+-- Listen for .control and .release typed in chat by THIS premium user
+local function StartControlListener()
+    local function onMsg(msg)
+        if not IsPremium() then return end
+        local clean = msg:match("^%S+:%s*(.+)$") or msg
+        if clean:sub(1,1) ~= "." then return end
+        local words = {}
+        for w in clean:sub(2):gmatch("%S+") do table.insert(words, w) end
+        local cmd = (words[1] or ""):lower()
+
+        if cmd == "control" or cmd == "ctrl" then
+            local targetName = words[2]
+            if not targetName then return end
+            local t = FindPlayer(targetName)
+            if not t then Notify("Control", "Player not found: "..targetName, "error") return end
+            -- Stop any existing control loop
+            if controlConn then controlConn:Disconnect() controlConn = nil end
+            controlTarget = t
+            Config.ActiveCmds["Controlling"] = t.Name RefreshActive()
+            Notify("Control", "Controlling "..t.DisplayName.."  |  .release to stop", "warning", 5)
+            -- Start WASD loop — sends a chat signal every 0.15s (throttled)
+            controlConn = task.spawn(function()
+                while controlTarget do
+                    local x, z = 0, 0
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)    then z = z - 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down)  then z = z + 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left)  then x = x - 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then x = x + 1 end
+                    SendChat(".ctrlmove "..controlTarget.Name.." "..x.." "..z)
+                    task.wait(0.15)
+                end
+            end)
+
+        elseif cmd == "release" then
+            -- Setting controlTarget to nil stops the task.spawn loop naturally
+            controlTarget = nil
+            controlConn   = nil
+            Config.ActiveCmds["Controlling"] = nil RefreshActive()
+            Notify("Control", "Control released", "info", 3)
+        end
+    end
+
+    -- Hook both chat systems
+    pcall(function()
+        local tcs = game:GetService("TextChatService")
+        tcs.MessageReceived:Connect(function(msg)
+            if msg.TextSource and msg.TextSource.UserId == LP.UserId then
+                onMsg(msg.Text)
+            end
+        end)
+    end)
+    LP.Chatted:Connect(onMsg)
+end
+
+if IsPremium() then
+    StartControlListener()
+end
+
+-- ── PREMIUM: SPIN ─────────────────────────────────────────
+-- .spin <player>  — handled in detection.lua via dot-command
+-- We just register it here so it shows in help
+Reg("spin_info", {}, "Premium: .spin <player> in chat", true, function()
+    Notify("Spin [P]", "Type .spin <player> in Roblox chat", "gold")
+end)
+
+-- ── PREMIUM: EXPLODE ──────────────────────────────────────
+Reg("explode_info", {}, "Premium: .explode <player> in chat", true, function()
+    Notify("Explode [P]", "Type .explode <player> in Roblox chat", "gold")
+end)
+
+-- ── PREMIUM: FOLLOW ───────────────────────────────────────
+Reg("follow_info", {}, "Premium: .follow <player> / .unfollow in chat", true, function()
+    Notify("Follow [P]", "Type .follow <player> in Roblox chat", "gold")
+end)
+
+-- ── PREMIUM: TP2ME ────────────────────────────────────────
+Reg("tp2me_info", {}, "Premium: .tp2me <player> / .tp2me <player> stop in chat", true, function()
+    Notify("TP2Me [P]", "Type .tp2me <player> in Roblox chat", "gold")
+end)
+
+
+-- ── LOOP TELEPORT ────────────────────────────────────────────
+local loopTpOn     = false
+local loopTpTarget = nil
+
+Reg("looptp", {"ltp"}, "Loop teleport to a player  e.g. looptp Player1 | looptp stop", false, function(a)
+    if not a[1] or a[1]:lower() == "stop" then
+        loopTpOn     = false
+        loopTpTarget = nil
+        Config.ActiveCmds["LoopTP"] = nil
+        RefreshActive()
+        Notify("LoopTP", "Stopped", "info")
+        return
+    end
+    local t = FindPlayer(a[1])
+    if not t then Notify("LoopTP", "Player not found: "..(a[1] or "?"), "error") return end
+    loopTpOn     = true
+    loopTpTarget = t
+    Config.ActiveCmds["LoopTP"] = t.Name
+    RefreshActive()
+    Notify("LoopTP", "Looping to "..t.DisplayName.."  |  looptp stop to cancel", "success", 4)
+    task.spawn(function()
+        while loopTpOn and loopTpTarget do
+            pcall(function()
+                local r  = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                local tr = loopTpTarget.Character and loopTpTarget.Character:FindFirstChild("HumanoidRootPart")
+                if r and tr then
+                    r.CFrame = tr.CFrame * CFrame.new(math.random(-3, 3), 0, math.random(-3, 3))
+                end
+            end)
+            task.wait(0.1)
+        end
+    end)
+end)
+
+-- ── VOID DESYNC ───────────────────────────────────────────────
+local desyncOn = false
+
+Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in/out of void", false, function()
+    if desyncOn then
+        desyncOn = false
+        Config.ActiveCmds["Desync"] = nil
+        RefreshActive()
+        Notify("Desync", "Off", "info")
+        return
+    end
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not r then Notify("Desync", "No character", "error") return end
+
+    desyncOn = true
+    Config.ActiveCmds["Desync"] = true
+    RefreshActive()
+    Notify("Desync", "On - you are desynced from the server", "success")
+
+    -- Desync works by firing a BodyPosition to void every frame
+    -- then immediately destroying it — server sees the teleport,
+    -- client physics corrects back instantly so camera/movement are unaffected
+    local desyncConn = nil
+    desyncConn = RunService.Heartbeat:Connect(function()
+        if not desyncOn then
+            desyncConn:Disconnect()
+            return
+        end
+        pcall(function()
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            local bp = Instance.new("BodyPosition")
+            bp.MaxForce = Vector3.new(0, 0, 0)  -- no force = no movement client side
+            bp.Position = Vector3.new(root.Position.X, -1e4, root.Position.Z)
+            bp.Parent   = root
+            Debris:AddItem(bp, 0)  -- destroy next frame
+        end)
+    end)
+end)
+
+-- ── INFINITE JUMP ────────────────────────────────────────────
+local ijOn   = false
+local ijConn = nil
+Reg("infinitejump", {"ij"}, "Toggle infinite jump", false, function()
+    if ijOn then
+        ijOn = false
+        Config.ActiveCmds["InfJump"] = nil RefreshActive()
+        if ijConn then ijConn:Disconnect() ijConn = nil end
+        Notify("Infinite Jump", "Off", "info")
+    else
+        ijOn = true
+        Config.ActiveCmds["InfJump"] = true RefreshActive()
+        ijConn = UserInputService.JumpRequest:Connect(function()
+            if not ijOn then return end
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+        Notify("Infinite Jump", "On  —  hold Space to keep jumping", "success")
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- RESPAWN - restore all active features
+-- ═══════════════════════════════════════════════════════════
+LP.CharacterAdded:Connect(function()
+    task.wait(1)
+    if flyOn      then flyOn  = false task.wait(0.2) StartFly()    end
+    if ncOn       then ncOn   = false task.wait(0.1) StartNoclip() end
+    if loopTpOn and loopTpTarget then
+        task.spawn(function()
+            while loopTpOn and loopTpTarget do
+                pcall(function()
+                    local r  = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                    local tr = loopTpTarget.Character and loopTpTarget.Character:FindFirstChild("HumanoidRootPart")
+                    if r and tr then
+                        r.CFrame = tr.CFrame * CFrame.new(math.random(-3,3), 0, math.random(-3,3))
+                    end
+                end)
+                task.wait(0.1)
+            end
+        end)
+    end
+    if desyncOn then
+        desyncOn = false
+        task.wait(0.5)
+        desyncOn = true
+        local desyncConn2 = nil
+        desyncConn2 = RunService.Heartbeat:Connect(function()
+            if not desyncOn then
+                desyncConn2:Disconnect()
+                return
+            end
+            pcall(function()
+                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                local bp = Instance.new("BodyPosition")
+                bp.MaxForce = Vector3.new(0, 0, 0)
+                bp.Position = Vector3.new(root.Position.X, -1e4, root.Position.Z)
+                bp.Parent   = root
+                Debris:AddItem(bp, 0)
+            end)
+        end)
+    end
+    if ijOn then
+        if ijConn then ijConn:Disconnect() ijConn = nil end
+        ijConn = UserInputService.JumpRequest:Connect(function()
+            if not ijOn then return end
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
+    if espOn      then
+        task.wait(1.2)
+        for _, p in ipairs(Players:GetPlayers()) do task.spawn(BuildESPFor, p) end
+    end
+    -- Restore visual toggles after respawn
+    task.wait(0.3)
+    if invisOn then
+        invisOn = false
+        local c = LP.Character
+        if c then
+            for _, p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") or p:IsA("Decal") then
+                    pcall(function() p.Transparency = 1 end)
+                end
+            end
+            invisOn = true
+        end
+    end
+    if ghostOn then
+        ghostOn = false
+        local c = LP.Character
+        if c then
+            for _, p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    pcall(function() p.Transparency = 0.6 p.CanCollide = false end)
+                end
+            end
+            ghostOn = true
+        end
+    end
+    if rainbowOn then
+        -- rainbowConn still running, just let it apply to new character
+    end
+    if bigheadOn then
+        local head = LP.Character and LP.Character:FindFirstChild("Head")
+        if head then pcall(function() head.Size = Vector3.new(8,8,8) end) end
+    end
+    if trailOn then
+        local c    = LP.Character
+        local root = c and c:FindFirstChild("HumanoidRootPart")
+        local head = c and c:FindFirstChild("Head")
+        if root and head and trailObj then
+            pcall(function() trailObj:Destroy() end)
+            trailObj = nil
+            trailOn = false
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
