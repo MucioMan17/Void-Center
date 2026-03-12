@@ -1173,11 +1173,115 @@ end)
 -- ── VOID DESYNC ───────────────────────────────────────────────
 local desyncOn = false
 
+-- Desync viewport GUI (shown while desync is active)
+local desyncGui = nil
+
+local function BuildDesyncViewer()
+    pcall(function() if desyncGui then desyncGui:Destroy() end end)
+
+    local sg = Instance.new("ScreenGui")
+    sg.Name           = "VCDesyncView"
+    sg.ResetOnSpawn   = false
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    sg.Parent         = game:GetService("CoreGui")
+
+    -- Container frame bottom-right
+    local frame = Instance.new("Frame")
+    frame.Size              = UDim2.new(0, 180, 0, 180)
+    frame.Position          = UDim2.new(1, -190, 1, -220)
+    frame.BackgroundColor3  = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.3
+    frame.BorderSizePixel   = 0
+    frame.Parent            = sg
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color     = Color3.fromRGB(140, 45, 255)
+    stroke.Thickness = 1.5
+    stroke.Parent    = frame
+
+    -- Label
+    local lbl = Instance.new("TextLabel")
+    lbl.Size                   = UDim2.new(1, 0, 0, 18)
+    lbl.Position               = UDim2.new(0, 0, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font                   = Enum.Font.GothamBold
+    lbl.Text                   = "SERVER VIEW"
+    lbl.TextColor3             = Color3.fromRGB(140, 45, 255)
+    lbl.TextSize               = 10
+    lbl.Parent                 = frame
+
+    -- ViewportFrame sits below the label
+    local vp = Instance.new("ViewportFrame")
+    vp.Size             = UDim2.new(1, -4, 1, -22)
+    vp.Position         = UDim2.new(0, 2, 0, 20)
+    vp.BackgroundColor3 = Color3.fromRGB(10, 0, 20)
+    vp.BorderSizePixel  = 0
+    vp.Ambient          = Color3.fromRGB(180, 180, 180)
+    vp.LightDirection   = Vector3.new(-1, -1, -1)
+    vp.Parent           = frame
+
+    -- Clone character into viewport
+    local char = LP.Character
+    if not char then return end
+    local clone = char:Clone()
+    -- Remove scripts from clone so it doesn't animate weirdly
+    for _, s in ipairs(clone:GetDescendants()) do
+        if s:IsA("Script") or s:IsA("LocalScript") or s:IsA("Animator") then
+            pcall(function() s:Destroy() end)
+        end
+    end
+    clone.Parent = vp
+
+    -- Viewport camera — orbits behind the clone
+    local vpCam = Instance.new("Camera")
+    vpCam.Parent = vp
+    vp.CurrentCamera = vpCam
+
+    -- Update loop — sync clone position to real character + orbit camera
+    local updateConn = RunService.RenderStepped:Connect(function()
+        if not desyncGui or not desyncGui.Parent then return end
+        pcall(function()
+            local root  = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            local cRoot = clone:FindFirstChild("HumanoidRootPart")
+            if not root or not cRoot then return end
+            -- Sync all part CFrames from real char to clone
+            for _, part in ipairs(LP.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    local cp = clone:FindFirstChild(part.Name)
+                    if cp and cp:IsA("BasePart") then
+                        cp.CFrame = part.CFrame
+                    end
+                end
+            end
+            -- Camera orbits 8 studs behind and 4 above the clone root
+            local cf = cRoot.CFrame
+            vpCam.CFrame = CFrame.lookAt(
+                cf.Position + cf.LookVector * -8 + Vector3.new(0, 4, 0),
+                cf.Position
+            )
+        end)
+    end)
+
+    desyncGui = sg
+    -- Store conn so we can clean it up
+    sg:GetPropertyChangedSignal("Parent"):Connect(function()
+        pcall(function() updateConn:Disconnect() end)
+    end)
+end
+
+local function DestroyDesyncViewer()
+    if desyncGui then
+        pcall(function() desyncGui:Destroy() end)
+        desyncGui = nil
+    end
+end
+
 Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in/out of void", false, function()
     if desyncOn then
         desyncOn = false
         Config.ActiveCmds["Desync"] = nil
         RefreshActive()
+        DestroyDesyncViewer()
         Notify("Desync", "Off", "info")
         return
     end
@@ -1187,7 +1291,8 @@ Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in
     desyncOn = true
     Config.ActiveCmds["Desync"] = true
     RefreshActive()
-    Notify("Desync", "On - you are desynced from the server", "success")
+    BuildDesyncViewer()
+    Notify("Desync", "On  |  server view shown bottom-right", "success")
 
     local desyncConn = nil
     desyncConn = RunService.Heartbeat:Connect(function()
@@ -1198,15 +1303,12 @@ Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in
         pcall(function()
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if not root then return end
-            -- Rapidly change AssemblyLinearVelocity — this replicates to server
-            -- making your server position jitter and hard to fling/kill
             local v = root.AssemblyLinearVelocity
             root.AssemblyLinearVelocity = Vector3.new(
                 v.X + math.random(-50, 50),
                 v.Y,
                 v.Z + math.random(-50, 50)
             )
-            -- Immediately zero it out so you don't actually move
             root.AssemblyLinearVelocity = Vector3.zero
         end)
     end)
@@ -1255,9 +1357,10 @@ LP.CharacterAdded:Connect(function()
         end)
     end
     if desyncOn then
-        desyncOn = false
+        -- Rebuild viewer with new character clone
+        DestroyDesyncViewer()
         task.wait(0.5)
-        desyncOn = true
+        BuildDesyncViewer()
         local desyncConn2 = nil
         desyncConn2 = RunService.Heartbeat:Connect(function()
             if not desyncOn then
