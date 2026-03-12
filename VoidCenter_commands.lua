@@ -1190,27 +1190,24 @@ Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in
     Notify("Desync", "On - you are desynced from the server", "success")
 
     local desyncConn = nil
-    local flickering  = false
     desyncConn = RunService.Heartbeat:Connect(function()
         if not desyncOn then
             desyncConn:Disconnect()
-            flickering = false
             return
         end
-        if flickering then return end
-        flickering = true
-        task.spawn(function()
-            pcall(function()
-                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                if not root then flickering = false return end
-                local realCF = root.CFrame
-                -- move to void — server replicates this
-                root.CFrame = CFrame.new(realCF.X, -2e4, realCF.Z)
-                -- immediately snap back same frame before camera moves
-                root.CFrame = realCF
-            end)
-            task.wait(0.05)
-            flickering = false
+        pcall(function()
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            -- Rapidly change AssemblyLinearVelocity — this replicates to server
+            -- making your server position jitter and hard to fling/kill
+            local v = root.AssemblyLinearVelocity
+            root.AssemblyLinearVelocity = Vector3.new(
+                v.X + math.random(-50, 50),
+                v.Y,
+                v.Z + math.random(-50, 50)
+            )
+            -- Immediately zero it out so you don't actually move
+            root.AssemblyLinearVelocity = Vector3.zero
         end)
     end)
 end)
@@ -1262,25 +1259,21 @@ LP.CharacterAdded:Connect(function()
         task.wait(0.5)
         desyncOn = true
         local desyncConn2 = nil
-        local flickering2  = false
         desyncConn2 = RunService.Heartbeat:Connect(function()
             if not desyncOn then
                 desyncConn2:Disconnect()
-                flickering2 = false
                 return
             end
-            if flickering2 then return end
-            flickering2 = true
-            task.spawn(function()
-                pcall(function()
-                    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                    if not root then flickering2 = false return end
-                    local realCF = root.CFrame
-                    root.CFrame = CFrame.new(realCF.X, -2e4, realCF.Z)
-                    root.CFrame = realCF
-                end)
-                task.wait(0.05)
-                flickering2 = false
+            pcall(function()
+                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                local v = root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity = Vector3.new(
+                    v.X + math.random(-50, 50),
+                    v.Y,
+                    v.Z + math.random(-50, 50)
+                )
+                root.AssemblyLinearVelocity = Vector3.zero
             end)
         end)
     end
