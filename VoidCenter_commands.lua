@@ -1189,23 +1189,28 @@ Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in
     RefreshActive()
     Notify("Desync", "On - you are desynced from the server", "success")
 
-    -- Desync works by firing a BodyPosition to void every frame
-    -- then immediately destroying it — server sees the teleport,
-    -- client physics corrects back instantly so camera/movement are unaffected
     local desyncConn = nil
+    local flickering  = false
     desyncConn = RunService.Heartbeat:Connect(function()
         if not desyncOn then
             desyncConn:Disconnect()
+            flickering = false
             return
         end
-        pcall(function()
-            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-            local bp = Instance.new("BodyPosition")
-            bp.MaxForce = Vector3.new(0, 0, 0)  -- no force = no movement client side
-            bp.Position = Vector3.new(root.Position.X, -1e4, root.Position.Z)
-            bp.Parent   = root
-            Debris:AddItem(bp, 0)  -- destroy next frame
+        if flickering then return end
+        flickering = true
+        task.spawn(function()
+            pcall(function()
+                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                if not root then flickering = false return end
+                local realCF = root.CFrame
+                -- move to void — server replicates this
+                root.CFrame = CFrame.new(realCF.X, -2e4, realCF.Z)
+                -- immediately snap back same frame before camera moves
+                root.CFrame = realCF
+            end)
+            task.wait(0.05)
+            flickering = false
         end)
     end)
 end)
@@ -1257,19 +1262,25 @@ LP.CharacterAdded:Connect(function()
         task.wait(0.5)
         desyncOn = true
         local desyncConn2 = nil
+        local flickering2  = false
         desyncConn2 = RunService.Heartbeat:Connect(function()
             if not desyncOn then
                 desyncConn2:Disconnect()
+                flickering2 = false
                 return
             end
-            pcall(function()
-                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-                local bp = Instance.new("BodyPosition")
-                bp.MaxForce = Vector3.new(0, 0, 0)
-                bp.Position = Vector3.new(root.Position.X, -1e4, root.Position.Z)
-                bp.Parent   = root
-                Debris:AddItem(bp, 0)
+            if flickering2 then return end
+            flickering2 = true
+            task.spawn(function()
+                pcall(function()
+                    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                    if not root then flickering2 = false return end
+                    local realCF = root.CFrame
+                    root.CFrame = CFrame.new(realCF.X, -2e4, realCF.Z)
+                    root.CFrame = realCF
+                end)
+                task.wait(0.05)
+                flickering2 = false
             end)
         end)
     end
