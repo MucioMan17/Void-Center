@@ -1171,147 +1171,110 @@ Reg("looptp", {"ltp"}, "Loop teleport to a player  e.g. looptp Player1 | looptp 
 end)
 
 -- ── VOID DESYNC ───────────────────────────────────────────────
-local desyncOn = false
 
--- Desync viewport GUI (shown while desync is active)
-local desyncGui = nil
 
-local function BuildDesyncViewer()
-    pcall(function() if desyncGui then desyncGui:Destroy() end end)
 
-    local sg = Instance.new("ScreenGui")
-    sg.Name           = "VCDesyncView"
-    sg.ResetOnSpawn   = false
-    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    sg.Parent         = game:GetService("CoreGui")
+-- ── GODMODE ──────────────────────────────────────────────────
+-- Combines everything that actually works from a LocalScript:
+-- 1. No collision        — flings and physics pass through you
+-- 2. Max health loop     — constantly resets HP to max
+-- 3. Anti-void           — saves you if you fall below void line
+-- 4. Freeze self briefly on fling detection — stops knockback dead
+local godOn     = false
+local godConns  = {}
 
-    -- Container frame bottom-right
-    local frame = Instance.new("Frame")
-    frame.Size              = UDim2.new(0, 180, 0, 180)
-    frame.Position          = UDim2.new(1, -190, 1, -220)
-    frame.BackgroundColor3  = Color3.fromRGB(0, 0, 0)
-    frame.BackgroundTransparency = 0.3
-    frame.BorderSizePixel   = 0
-    frame.Parent            = sg
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color     = Color3.fromRGB(140, 45, 255)
-    stroke.Thickness = 1.5
-    stroke.Parent    = frame
-
-    -- Label
-    local lbl = Instance.new("TextLabel")
-    lbl.Size                   = UDim2.new(1, 0, 0, 18)
-    lbl.Position               = UDim2.new(0, 0, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Font                   = Enum.Font.GothamBold
-    lbl.Text                   = "SERVER VIEW"
-    lbl.TextColor3             = Color3.fromRGB(140, 45, 255)
-    lbl.TextSize               = 10
-    lbl.Parent                 = frame
-
-    -- ViewportFrame sits below the label
-    local vp = Instance.new("ViewportFrame")
-    vp.Size             = UDim2.new(1, -4, 1, -22)
-    vp.Position         = UDim2.new(0, 2, 0, 20)
-    vp.BackgroundColor3 = Color3.fromRGB(10, 0, 20)
-    vp.BorderSizePixel  = 0
-    vp.Ambient          = Color3.fromRGB(180, 180, 180)
-    vp.LightDirection   = Vector3.new(-1, -1, -1)
-    vp.Parent           = frame
-
-    -- Clone character into viewport
-    local char = LP.Character
-    if not char then return end
-    local clone = char:Clone()
-    -- Remove scripts from clone so it doesn't animate weirdly
-    for _, s in ipairs(clone:GetDescendants()) do
-        if s:IsA("Script") or s:IsA("LocalScript") or s:IsA("Animator") then
-            pcall(function() s:Destroy() end)
-        end
-    end
-    clone.Parent = vp
-
-    -- Viewport camera — orbits behind the clone
-    local vpCam = Instance.new("Camera")
-    vpCam.Parent = vp
-    vp.CurrentCamera = vpCam
-
-    -- Update loop — sync clone position to real character + orbit camera
-    local updateConn = RunService.RenderStepped:Connect(function()
-        if not desyncGui or not desyncGui.Parent then return end
-        pcall(function()
-            local root  = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-            local cRoot = clone:FindFirstChild("HumanoidRootPart")
-            if not root or not cRoot then return end
-            -- Sync all part CFrames from real char to clone
-            for _, part in ipairs(LP.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    local cp = clone:FindFirstChild(part.Name)
-                    if cp and cp:IsA("BasePart") then
-                        cp.CFrame = part.CFrame
-                    end
-                end
-            end
-            -- Camera orbits 8 studs behind and 4 above the clone root
-            local cf = cRoot.CFrame
-            vpCam.CFrame = CFrame.lookAt(
-                cf.Position + cf.LookVector * -8 + Vector3.new(0, 4, 0),
-                cf.Position
-            )
-        end)
-    end)
-
-    desyncGui = sg
-    -- Store conn so we can clean it up
-    sg:GetPropertyChangedSignal("Parent"):Connect(function()
-        pcall(function() updateConn:Disconnect() end)
-    end)
-end
-
-local function DestroyDesyncViewer()
-    if desyncGui then
-        pcall(function() desyncGui:Destroy() end)
-        desyncGui = nil
-    end
-end
-
-Reg("desync", {"vd","voiddesync"}, "Toggle void desync - rapidly flickers you in/out of void", false, function()
-    if desyncOn then
-        desyncOn = false
-        Config.ActiveCmds["Desync"] = nil
-        RefreshActive()
-        DestroyDesyncViewer()
-        Notify("Desync", "Off", "info")
-        return
-    end
-    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not r then Notify("Desync", "No character", "error") return end
-
-    desyncOn = true
-    Config.ActiveCmds["Desync"] = true
+local function StopGod()
+    godOn = false
+    Config.ActiveCmds["Godmode"] = nil
     RefreshActive()
-    BuildDesyncViewer()
-    Notify("Desync", "On  |  server view shown bottom-right", "success")
-
-    local desyncConn = nil
-    desyncConn = RunService.Heartbeat:Connect(function()
-        if not desyncOn then
-            desyncConn:Disconnect()
-            return
+    for _, c in ipairs(godConns) do pcall(function() c:Disconnect() end) end
+    godConns = {}
+    -- Restore collision
+    pcall(function()
+        local chr = LP.Character
+        if not chr then return end
+        for _, p in ipairs(chr:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = true end
         end
+        local hum = chr:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end)
+    Notify("Godmode", "Off", "info")
+end
+
+local function StartGod()
+    local chr = LP.Character
+    local hum = chr and chr:FindFirstChildOfClass("Humanoid")
+    if not chr or not hum then Notify("Godmode", "No character", "error") return end
+
+    godOn = true
+    Config.ActiveCmds["Godmode"] = true
+    RefreshActive()
+
+    -- 1. No collision every frame
+    local c1 = RunService.Stepped:Connect(function()
+        if not godOn then return end
         pcall(function()
-            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-            local v = root.AssemblyLinearVelocity
-            root.AssemblyLinearVelocity = Vector3.new(
-                v.X + math.random(-50, 50),
-                v.Y,
-                v.Z + math.random(-50, 50)
-            )
-            root.AssemblyLinearVelocity = Vector3.zero
+            local c = LP.Character
+            if not c then return end
+            for _, p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = false end
+            end
         end)
     end)
+    table.insert(godConns, c1)
+
+    -- 2. Max health loop every 0.1s
+    local c2 = RunService.Heartbeat:Connect(function()
+        if not godOn then return end
+        pcall(function()
+            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if h and h.Health > 0 then h.Health = h.MaxHealth end
+        end)
+    end)
+    table.insert(godConns, c2)
+
+    -- 3. Anti-void
+    local voidY    = -500
+    local cooldown = false
+    pcall(function() voidY = workspace.FallenPartsDestroyHeight end)
+    local triggerY = voidY + 30
+    local c3 = RunService.Heartbeat:Connect(function()
+        if not godOn or cooldown then return end
+        pcall(function()
+            local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if not r or not h or h.Health <= 0 then return end
+            if r.Position.Y < triggerY then
+                cooldown = true
+                h.Health = h.MaxHealth
+                r.CFrame = CFrame.new(r.Position.X, math.max(triggerY + 50, 10), r.Position.Z)
+                task.wait(1.5)
+                cooldown = false
+            end
+        end)
+    end)
+    table.insert(godConns, c3)
+
+    -- 4. Fling detection — if velocity spikes suddenly, zero it out
+    local c4 = RunService.Heartbeat:Connect(function()
+        if not godOn then return end
+        pcall(function()
+            local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if not r then return end
+            local vel = r.AssemblyLinearVelocity
+            if vel.Magnitude > 100 then
+                r.AssemblyLinearVelocity = Vector3.zero
+            end
+        end)
+    end)
+    table.insert(godConns, c4)
+
+    Notify("Godmode", "On  —  no collision / max health / anti-void / anti-fling", "success", 5)
+end
+
+Reg("godmode", {"god","gm"}, "Toggle godmode (no collision + max health + anti-void + anti-fling)", false, function()
+    if godOn then StopGod() else StartGod() end
 end)
 
 -- ── INFINITE JUMP ────────────────────────────────────────────
@@ -1342,6 +1305,7 @@ LP.CharacterAdded:Connect(function()
     task.wait(1)
     if flyOn      then flyOn  = false task.wait(0.2) StartFly()    end
     if ncOn       then ncOn   = false task.wait(0.1) StartNoclip() end
+    if godOn      then godOn  = false task.wait(0.3) StartGod()    end
     if loopTpOn and loopTpTarget then
         task.spawn(function()
             while loopTpOn and loopTpTarget do
@@ -1356,30 +1320,7 @@ LP.CharacterAdded:Connect(function()
             end
         end)
     end
-    if desyncOn then
-        -- Rebuild viewer with new character clone
-        DestroyDesyncViewer()
-        task.wait(0.5)
-        BuildDesyncViewer()
-        local desyncConn2 = nil
-        desyncConn2 = RunService.Heartbeat:Connect(function()
-            if not desyncOn then
-                desyncConn2:Disconnect()
-                return
-            end
-            pcall(function()
-                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-                local v = root.AssemblyLinearVelocity
-                root.AssemblyLinearVelocity = Vector3.new(
-                    v.X + math.random(-50, 50),
-                    v.Y,
-                    v.Z + math.random(-50, 50)
-                )
-                root.AssemblyLinearVelocity = Vector3.zero
-            end)
-        end)
-    end
+
     if ijOn then
         if ijConn then ijConn:Disconnect() ijConn = nil end
         ijConn = UserInputService.JumpRequest:Connect(function()
