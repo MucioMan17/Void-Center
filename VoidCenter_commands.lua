@@ -1170,6 +1170,64 @@ Reg("looptp", {"ltp"}, "Loop teleport to a player  e.g. looptp Player1 | looptp 
     end)
 end)
 
+-- ── VOID SPAM ─────────────────────────────────────────────────
+local vspamOn   = false
+local vspamConn = nil
+
+Reg("voidspam", {"vs"}, "Toggle void spam", false, function()
+    if vspamOn then
+        vspamOn = false
+        Config.ActiveCmds["VoidSpam"] = nil
+        RefreshActive()
+        if vspamConn then vspamConn:Disconnect() vspamConn = nil end
+        -- Restore camera
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            cam.CameraType = Enum.CameraType.Custom
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then cam.CameraSubject = hum end
+        end)
+        Notify("Void Spam", "Off", "info")
+        return
+    end
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not r then Notify("Void Spam", "No character", "error") return end
+    vspamOn = true
+    Config.ActiveCmds["VoidSpam"] = true
+    RefreshActive()
+    Notify("Void Spam", "On  —  type again to stop", "success")
+
+    -- Lock camera to character so it stays on the map while body flickers
+    local cam = workspace.CurrentCamera
+    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    cam.CameraType    = Enum.CameraType.Custom
+    if hum then cam.CameraSubject = hum end
+
+    local inVoid  = false
+    local savedCF = r.CFrame
+    local timer   = 0
+
+    vspamConn = RunService.Heartbeat:Connect(function(dt)
+        if not vspamOn then return end
+        local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        timer = timer + dt
+        -- Flicker every 0.15s — visible to others but not seizure-inducing
+        if timer < 0.15 then return end
+        timer = 0
+
+        if inVoid then
+            root.CFrame = savedCF
+            inVoid = false
+        else
+            savedCF = root.CFrame
+            root.CFrame = CFrame.new(savedCF.X, -1e4, savedCF.Z)
+            inVoid = true
+        end
+    end)
+end)
+
 -- ── INFINITE JUMP ────────────────────────────────────────────
 local ijOn   = false
 local ijConn = nil
@@ -1199,6 +1257,30 @@ LP.CharacterAdded:Connect(function()
     if flyOn      then flyOn  = false task.wait(0.2) StartFly()    end
     if ncOn       then ncOn   = false task.wait(0.1) StartNoclip() end
     if godOn      then godOn  = false task.wait(0.3) StartGod()    end
+    if vspamOn then
+        if vspamConn then vspamConn:Disconnect() vspamConn = nil end
+        local inVoid2, savedCF2, timer2 = false, nil, 0
+        local cam2 = workspace.CurrentCamera
+        local hum2 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        cam2.CameraType = Enum.CameraType.Custom
+        if hum2 then cam2.CameraSubject = hum2 end
+        vspamConn = RunService.Heartbeat:Connect(function(dt)
+            if not vspamOn then return end
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            timer2 = timer2 + dt
+            if timer2 < 0.15 then return end
+            timer2 = 0
+            if inVoid2 then
+                root.CFrame = savedCF2
+                inVoid2 = false
+            else
+                savedCF2 = root.CFrame
+                root.CFrame = CFrame.new(savedCF2.X, -1e4, savedCF2.Z)
+                inVoid2 = true
+            end
+        end)
+    end
 
     if loopTpOn and loopTpTarget then
         task.spawn(function()
