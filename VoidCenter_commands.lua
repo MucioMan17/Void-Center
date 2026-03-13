@@ -1277,6 +1277,77 @@ Reg("godmode", {"god","gm"}, "Toggle godmode (no collision + max health + anti-v
     if godOn then StopGod() else StartGod() end
 end)
 
+-- ── VOID DESYNC ─────────────────────────────────────────────
+-- Rapidly teleports you to the void and back every frame.
+-- On your screen you stay in place (we correct back immediately).
+-- The server receives both positions causing replication confusion.
+local vdesyncOn   = false
+local vdesyncConn = nil
+
+Reg("voiddesync", {"vd"}, "Toggle void desync", false, function()
+    if vdesyncOn then
+        vdesyncOn = false
+        Config.ActiveCmds["VoidDesync"] = nil
+        RefreshActive()
+        if vdesyncConn then vdesyncConn:Disconnect() vdesyncConn = nil end
+        Notify("Void Desync", "Off", "info")
+        return
+    end
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not r then Notify("Void Desync", "No character", "error") return end
+    vdesyncOn = true
+    Config.ActiveCmds["VoidDesync"] = true
+    RefreshActive()
+    Notify("Void Desync", "On", "success")
+    vdesyncConn = RunService.RenderStepped:Connect(function()
+        if not vdesyncOn then return end
+        local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        local cf = root.CFrame
+        root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
+        root.CFrame = cf
+    end)
+end)
+
+-- ── VOID SPAM ─────────────────────────────────────────────────
+-- Teleports you rapidly in and out of the void on a loop.
+-- Unlike desync this actually moves you visually — use it to
+-- make yourself impossible to click or interact with.
+local vspamOn   = false
+local vspamConn = nil
+
+Reg("voidspam", {"vs"}, "Toggle void spam - flicker in and out of void visually", false, function()
+    if vspamOn then
+        vspamOn = false
+        Config.ActiveCmds["VoidSpam"] = nil
+        RefreshActive()
+        if vspamConn then vspamConn:Disconnect() vspamConn = nil end
+        Notify("Void Spam", "Off", "info")
+        return
+    end
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not r then Notify("Void Spam", "No character", "error") return end
+    vspamOn = true
+    Config.ActiveCmds["VoidSpam"] = true
+    RefreshActive()
+    Notify("Void Spam", "On  —  type again to stop", "success")
+    local savedCF = r.CFrame
+    local inVoid  = false
+    vspamConn = RunService.Heartbeat:Connect(function()
+        if not vspamOn then return end
+        local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        if inVoid then
+            root.CFrame = savedCF
+            inVoid = false
+        else
+            savedCF = root.CFrame
+            root.CFrame = CFrame.new(savedCF.X, -1e4, savedCF.Z)
+            inVoid = true
+        end
+    end)
+end)
+
 -- ── INFINITE JUMP ────────────────────────────────────────────
 local ijOn   = false
 local ijConn = nil
@@ -1306,6 +1377,35 @@ LP.CharacterAdded:Connect(function()
     if flyOn      then flyOn  = false task.wait(0.2) StartFly()    end
     if ncOn       then ncOn   = false task.wait(0.1) StartNoclip() end
     if godOn      then godOn  = false task.wait(0.3) StartGod()    end
+    if vdesyncOn  then
+        if vdesyncConn then vdesyncConn:Disconnect() vdesyncConn = nil end
+        vdesyncConn = RunService.RenderStepped:Connect(function()
+            if not vdesyncOn then return end
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            local cf = root.CFrame
+            root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
+            root.CFrame = cf
+        end)
+    end
+    if vspamOn then
+        if vspamConn then vspamConn:Disconnect() vspamConn = nil end
+        local inVoid2 = false
+        local savedCF2 = CFrame.new(0,0,0)
+        vspamConn = RunService.Heartbeat:Connect(function()
+            if not vspamOn then return end
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            if inVoid2 then
+                root.CFrame = savedCF2
+                inVoid2 = false
+            else
+                savedCF2 = root.CFrame
+                root.CFrame = CFrame.new(savedCF2.X, -1e4, savedCF2.Z)
+                inVoid2 = true
+            end
+        end)
+    end
     if loopTpOn and loopTpTarget then
         task.spawn(function()
             while loopTpOn and loopTpTarget do
