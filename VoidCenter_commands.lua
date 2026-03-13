@@ -1203,15 +1203,23 @@ Reg("voidspam", {"vs"}, "Toggle void spam", false, function()
     cam.CameraType    = Enum.CameraType.Custom
     if hum then cam.CameraSubject = hum end
 
-    vspamConn = RunService.RenderStepped:Connect(function()
+    local inVoid = false
+    local savedCF = r.CFrame
+
+    vspamConn = RunService.Heartbeat:Connect(function()
         if not vspamOn then return end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not root then return end
-        -- Snap to void and back within same render step
-        -- RenderStepped fires every frame so camera never sees the flicker
-        local cf = root.CFrame
-        root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
-        root.CFrame = cf
+        if inVoid then
+            -- Return to saved position so humanoid can process movement
+            root.CFrame = savedCF
+            inVoid = false
+        else
+            -- Save where we are (includes any movement made while visible)
+            savedCF = root.CFrame
+            root.CFrame = CFrame.new(savedCF.X, -1e4, savedCF.Z)
+            inVoid = true
+        end
     end)
 end)
 
@@ -1246,17 +1254,20 @@ LP.CharacterAdded:Connect(function()
     if godOn      then godOn  = false task.wait(0.3) StartGod()    end
     if vspamOn then
         if vspamConn then vspamConn:Disconnect() vspamConn = nil end
-        local cam2 = workspace.CurrentCamera
-        local hum2 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        cam2.CameraType = Enum.CameraType.Custom
-        if hum2 then cam2.CameraSubject = hum2 end
-        vspamConn = RunService.RenderStepped:Connect(function()
+        local inVoid2 = false
+        local savedCF2 = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") and LP.Character.HumanoidRootPart.CFrame or CFrame.new()
+        vspamConn = RunService.Heartbeat:Connect(function()
             if not vspamOn then return end
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if not root then return end
-            local cf = root.CFrame
-            root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
-            root.CFrame = cf
+            if inVoid2 then
+                root.CFrame = savedCF2
+                inVoid2 = false
+            else
+                savedCF2 = root.CFrame
+                root.CFrame = CFrame.new(savedCF2.X, -1e4, savedCF2.Z)
+                inVoid2 = true
+            end
         end)
     end
 
