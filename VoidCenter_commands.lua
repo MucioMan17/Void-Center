@@ -1203,9 +1203,7 @@ Reg("voidspam", {"vs"}, "Toggle void spam", false, function()
     cam.CameraType    = Enum.CameraType.Custom
     if hum then cam.CameraSubject = hum end
 
-    local inVoid  = false
-    local savedCF = r.CFrame
-    local timer   = 0
+    local timer = 0
 
     vspamConn = RunService.Heartbeat:Connect(function(dt)
         if not vspamOn then return end
@@ -1213,18 +1211,14 @@ Reg("voidspam", {"vs"}, "Toggle void spam", false, function()
         if not root then return end
 
         timer = timer + dt
-        -- Flicker every 0.15s — visible to others but not seizure-inducing
-        if timer < 0.15 then return end
+        if timer < 0.09 then return end
         timer = 0
 
-        if inVoid then
-            root.CFrame = savedCF
-            inVoid = false
-        else
-            savedCF = root.CFrame
-            root.CFrame = CFrame.new(savedCF.X, -1e4, savedCF.Z)
-            inVoid = true
-        end
+        -- Snap to void and immediately back in the same step
+        -- so character never actually stays in void and movement is unaffected
+        local cf = root.CFrame
+        root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
+        root.CFrame = cf
     end)
 end)
 
@@ -1259,7 +1253,7 @@ LP.CharacterAdded:Connect(function()
     if godOn      then godOn  = false task.wait(0.3) StartGod()    end
     if vspamOn then
         if vspamConn then vspamConn:Disconnect() vspamConn = nil end
-        local inVoid2, savedCF2, timer2 = false, nil, 0
+        local timer2 = 0
         local cam2 = workspace.CurrentCamera
         local hum2 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         cam2.CameraType = Enum.CameraType.Custom
@@ -1269,16 +1263,11 @@ LP.CharacterAdded:Connect(function()
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if not root then return end
             timer2 = timer2 + dt
-            if timer2 < 0.15 then return end
+            if timer2 < 0.09 then return end
             timer2 = 0
-            if inVoid2 then
-                root.CFrame = savedCF2
-                inVoid2 = false
-            else
-                savedCF2 = root.CFrame
-                root.CFrame = CFrame.new(savedCF2.X, -1e4, savedCF2.Z)
-                inVoid2 = true
-            end
+            local cf = root.CFrame
+            root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
+            root.CFrame = cf
         end)
     end
 
