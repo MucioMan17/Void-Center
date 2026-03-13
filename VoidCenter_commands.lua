@@ -1203,19 +1203,12 @@ Reg("voidspam", {"vs"}, "Toggle void spam", false, function()
     cam.CameraType    = Enum.CameraType.Custom
     if hum then cam.CameraSubject = hum end
 
-    local timer = 0
-
-    vspamConn = RunService.Heartbeat:Connect(function(dt)
+    vspamConn = RunService.RenderStepped:Connect(function()
         if not vspamOn then return end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not root then return end
-
-        timer = timer + dt
-        if timer < 0.09 then return end
-        timer = 0
-
-        -- Snap to void and immediately back in the same step
-        -- so character never actually stays in void and movement is unaffected
+        -- Snap to void and back within same render step
+        -- RenderStepped fires every frame so camera never sees the flicker
         local cf = root.CFrame
         root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
         root.CFrame = cf
@@ -1253,18 +1246,14 @@ LP.CharacterAdded:Connect(function()
     if godOn      then godOn  = false task.wait(0.3) StartGod()    end
     if vspamOn then
         if vspamConn then vspamConn:Disconnect() vspamConn = nil end
-        local timer2 = 0
         local cam2 = workspace.CurrentCamera
         local hum2 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         cam2.CameraType = Enum.CameraType.Custom
         if hum2 then cam2.CameraSubject = hum2 end
-        vspamConn = RunService.Heartbeat:Connect(function(dt)
+        vspamConn = RunService.RenderStepped:Connect(function()
             if not vspamOn then return end
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if not root then return end
-            timer2 = timer2 + dt
-            if timer2 < 0.09 then return end
-            timer2 = 0
             local cf = root.CFrame
             root.CFrame = CFrame.new(cf.X, -1e4, cf.Z)
             root.CFrame = cf
