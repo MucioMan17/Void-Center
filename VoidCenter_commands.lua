@@ -1331,15 +1331,13 @@ local function absorbPart(part)
 
     table.insert(infinityParts, {
         part        = part,
-        angle       = math.random() * math.pi * 2,
-        radius      = math.random(30, 40),
-        height      = math.random(-6, 6),
-        speed       = (math.random(30, 60) / 100) * (math.random(0,1) == 0 and 1 or -1),
-        tiltX       = math.random(-25, 25) / 100,
-        tiltZ       = math.random(-25, 25) / 100,
-        wobble      = math.random() * math.pi * 2,
-        wobbleSpeed = math.random(20, 50) / 100,
-        wobbleAmt   = math.random(1, 3),
+        angle       = math.random() * math.pi * 2, -- spread around the ring
+        radius      = 35,                           -- all same distance
+        height      = math.random(-2, 2),           -- slight vertical variation
+        speed       = 0.5,                          -- all same direction, same speed
+        wobble      = math.random() * math.pi * 2, -- individual wobble offset
+        wobbleSpeed = math.random(30, 60) / 100,   -- slightly different wobble rates
+        wobbleAmt   = math.random(1, 3),           -- small drift in and out
     })
 end
 
@@ -1409,13 +1407,14 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
                 data.angle  = data.angle  + dt * data.speed
                 data.wobble = data.wobble + dt * data.wobbleSpeed
 
-                local x  = math.cos(data.angle) * data.radius
-                local z  = math.sin(data.angle) * data.radius
-                local tx = x + z * data.tiltX
-                local tz = z + x * data.tiltZ
-                local ty = data.height + math.sin(data.wobble) * data.wobbleAmt
-
-                local target = center + Vector3.new(tx, ty, tz)
+                -- All on same ring, same radius, same direction
+                -- wobble adds small random drift so they feel alive not robotic
+                local wobbleOffset = math.sin(data.wobble) * data.wobbleAmt
+                local target = center + Vector3.new(
+                    math.cos(data.angle) * (data.radius + wobbleOffset),
+                    data.height + math.sin(data.wobble * 0.7) * 1.5,
+                    math.sin(data.angle) * (data.radius + wobbleOffset)
+                )
 
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
