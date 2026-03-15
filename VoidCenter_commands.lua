@@ -1305,9 +1305,9 @@ local function absorbPart(part)
 
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-    bp.P        = 2e4
-    bp.D        = 2e3
+    bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bp.P        = 5e4
+    bp.D        = 5e3
     bp.Position = part.Position
     bp.Parent   = part
 
@@ -1345,9 +1345,28 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
     infinityOn = true
     Config.ActiveCmds["Infinity"] = true
     RefreshActive()
-    Notify("Infinity", "On  |  infinity off to stop", "success", 4)
+    -- Immediate first scan so objects start moving right away
+    local function doScan()
+        local r2 = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not r2 then return end
+        local c2 = r2.Position + Vector3.new(0, 2, 0)
+        local op = OverlapParams.new()
+        op.FilterType = Enum.RaycastFilterType.Exclude
+        local excludes = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then table.insert(excludes, p.Character) end
+        end
+        op.FilterDescendantsInstances = excludes
+        local nearby = workspace:GetPartBoundsInRadius(c2, 80, op)
+        for _, obj in ipairs(nearby) do
+            if #infinityParts >= 30 then break end
+            absorbPart(obj)
+        end
+        Notify("Infinity", "On  —  "..#infinityParts.." objects  |  infinity off to stop", "success", 4)
+    end
+    doScan()
 
-    local scanTimer = 0
+    local scanTimer = 2  -- set to 2 so next scan happens after full interval
 
     infinityConn = RunService.Heartbeat:Connect(function(dt)
         if not infinityOn then return end
@@ -1358,25 +1377,21 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
         scanTimer = scanTimer + dt
         if scanTimer >= 2 then
             scanTimer = 0
-            local op = OverlapParams.new()
-            op.FilterType = Enum.RaycastFilterType.Exclude
-            local excludes = {}
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character then table.insert(excludes, p.Character) end
-            end
-            op.FilterDescendantsInstances = excludes
-            local nearby = workspace:GetPartBoundsInRadius(center, 80, op)
-            local grabbed = 0
-            local skipped = 0
-            for _, obj in ipairs(nearby) do
-                if isSafeToGrab(obj) and not alreadyOrbiting(obj) then
+            -- Cap at 30 objects max so it doesn't grab the whole map
+            if #infinityParts < 30 then
+                local op = OverlapParams.new()
+                op.FilterType = Enum.RaycastFilterType.Exclude
+                local excludes = {}
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p.Character then table.insert(excludes, p.Character) end
+                end
+                op.FilterDescendantsInstances = excludes
+                local nearby = workspace:GetPartBoundsInRadius(center, 80, op)
+                for _, obj in ipairs(nearby) do
+                    if #infinityParts >= 30 then break end
                     absorbPart(obj)
-                    grabbed = grabbed + 1
-                else
-                    skipped = skipped + 1
                 end
             end
-            warn("[Infinity] Found:"..#nearby.." Grabbed:"..grabbed.." Skipped:"..skipped.." Orbiting:"..#infinityParts)
         end
 
         for i = #infinityParts, 1, -1 do
