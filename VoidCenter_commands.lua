@@ -1315,7 +1315,7 @@ Reg("infinity", {"inf","gojo"}, "Pull nearby objects into orbit  e.g. infinity 4
                     table.insert(infinityParts, {
                         part   = obj,
                         angle  = math.random() * math.pi * 2,
-                        radius = 10 + math.random(-1, 1),
+                        radius = 30 + math.random(-2, 2),
                         height = math.random(-2, 3),
                         speed  = math.random(80, 150) / 100,
                     })
