@@ -1282,43 +1282,64 @@ local function alreadyOrbiting(part)
     return false
 end
 
+local function isSafeToGrab(part)
+    if part.Anchored then return false end
+    if isCharPart(part) then return false end
+    -- Skip parts that are clearly map geometry:
+    -- 1. Too big
+    local s = part.Size
+    if math.max(s.X, s.Y, s.Z) > 12 then return false end
+    -- 2. Part of a large model with many parts (likely map)
+    local parent = part.Parent
+    if parent and parent:IsA("Model") then
+        local count = 0
+        for _, c in ipairs(parent:GetChildren()) do
+            if c:IsA("BasePart") then
+                count = count + 1
+                if count > 8 then return false end
+            end
+        end
+    end
+    -- 3. Named like map parts
+    local name = part.Name:lower()
+    if name == "baseplate" or name == "floor" or name == "wall"
+    or name == "ceiling" or name == "ground" or name == "terrain" then
+        return false
+    end
+    return true
+end
+
 local function absorbPart(part)
     if alreadyOrbiting(part) then return end
-    if part.Anchored then return end
-    -- Size filter: not too big (flings you), not too small (pointless)
-    local s = part.Size
-    local maxDim = math.max(s.X, s.Y, s.Z)
-    local minDim = math.min(s.X, s.Y, s.Z)
-    if maxDim > 15 or minDim < 0.1 then return end
+    if not isSafeToGrab(part) then return end
 
-    -- Kill momentum on arrival
     pcall(function()
         part.AssemblyLinearVelocity  = Vector3.zero
         part.AssemblyAngularVelocity = Vector3.zero
     end)
 
-    -- BodyPosition makes it server visible
     local old = part:FindFirstChild("VCInfBP")
     if old then old:Destroy() end
+
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-    bp.P        = 1e5
-    bp.D        = 1e4
+    bp.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+    bp.P        = 2e4
+    bp.D        = 2e3
     bp.Position = part.Position
     bp.Parent   = part
 
     table.insert(infinityParts, {
         part        = part,
         angle       = math.random() * math.pi * 2,
-        radius      = math.random(28, 42),
-        height      = math.random(-8, 8),
-        speed       = (math.random(25, 55) / 100) * (math.random(0,1) == 0 and 1 or -1),
-        tiltX       = math.random(-30, 30) / 100,
-        tiltZ       = math.random(-30, 30) / 100,
+        radius      = math.random(30, 40),
+        height      = math.random(-6, 6),
+        speed       = (math.random(30, 60) / 100) * (math.random(0,1) == 0 and 1 or -1),
+        tiltX       = math.random(-25, 25) / 100,
+        tiltZ       = math.random(-25, 25) / 100,
         wobble      = math.random() * math.pi * 2,
         wobbleSpeed = math.random(20, 50) / 100,
-        wobbleAmt   = math.random(1, 4),
+        wobbleAmt   = math.random(1, 3),
     })
 end
 
@@ -1357,7 +1378,6 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Scan every 2s
         scanTimer = scanTimer + dt
         if scanTimer >= 2 then
             scanTimer = 0
@@ -1370,7 +1390,7 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
             op.FilterDescendantsInstances = excludes
             local nearby = workspace:GetPartBoundsInRadius(center, 50, op)
             for _, obj in ipairs(nearby) do
-                if not isCharPart(obj) then absorbPart(obj) end
+                absorbPart(obj)
             end
         end
 
@@ -1389,23 +1409,18 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
                 data.angle  = data.angle  + dt * data.speed
                 data.wobble = data.wobble + dt * data.wobbleSpeed
 
-                local x = math.cos(data.angle) * data.radius
-                local z = math.sin(data.angle) * data.radius
+                local x  = math.cos(data.angle) * data.radius
+                local z  = math.sin(data.angle) * data.radius
                 local tx = x + z * data.tiltX
                 local tz = z + x * data.tiltZ
                 local ty = data.height + math.sin(data.wobble) * data.wobbleAmt
 
                 local target = center + Vector3.new(tx, ty, tz)
 
-                -- BodyPosition tells the server where it should be
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
 
-                -- CFrame enforces it on our client so it never drifts
-                -- Combined they give a solid hold that looks right to everyone
-                data.part.CFrame = CFrame.new(target)
-
-                -- Zero velocity so nothing can build momentum and escape
+                -- Zero velocity so parts never build momentum and escape
                 data.part.AssemblyLinearVelocity  = Vector3.zero
                 data.part.AssemblyAngularVelocity = Vector3.zero
             end)
