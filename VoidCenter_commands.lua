@@ -1287,13 +1287,23 @@ local function absorbPart(part, orbitRadius)
     if alreadyOrbiting(part) then return end
     local old = part:FindFirstChild("VCInfBP")
     if old then old:Destroy() end
+
+    -- Disable collision immediately so it can never physically touch you
+    pcall(function() part.CanCollide = false end)
+    -- Kill any existing velocity so it doesn't arrive with momentum
+    pcall(function()
+        part.AssemblyLinearVelocity  = Vector3.zero
+        part.AssemblyAngularVelocity = Vector3.zero
+    end)
+
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(2e3, 2e3, 2e3)  -- gentle force, won't fling you
+    bp.MaxForce = Vector3.new(5e3, 5e3, 5e3)
     bp.Position = part.Position
-    bp.P        = 800   -- slow acceleration into orbit
-    bp.D        = 200   -- high damping so it doesn't overshoot
+    bp.P        = 1200
+    bp.D        = 400
     bp.Parent   = part
+
     table.insert(infinityParts, {
         part   = part,
         angle  = math.random() * math.pi * 2,
@@ -1365,6 +1375,9 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distan
                     table.remove(infinityParts, i)
                     return
                 end
+                -- Keep collision disabled every frame in case the game resets it
+                pcall(function() data.part.CanCollide = false end)
+
                 data.angle = data.angle + dt * data.speed
                 local target = center + Vector3.new(
                     math.cos(data.angle) * data.radius,
@@ -1373,6 +1386,17 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distan
                 )
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
+
+                -- Hard barrier — if anything breaches 5 studs instantly zero velocity
+                -- and push it back to its orbit target so it can never reach us
+                local dist = (data.part.Position - center).Magnitude
+                if dist < 5 then
+                    pcall(function()
+                        data.part.AssemblyLinearVelocity  = Vector3.zero
+                        data.part.AssemblyAngularVelocity = Vector3.zero
+                        if bp then bp.Position = target end
+                    end)
+                end
             end)
         end
     end)
