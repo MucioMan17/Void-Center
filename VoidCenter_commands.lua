@@ -1267,7 +1267,7 @@ end)
 local orbitOn    = false
 local orbitParts = {}
 local orbitConn  = nil
-local ORBIT_DIST = 12  -- how far objects stay from you
+local ORBIT_DIST = 12
 
 local function StopOrbit()
     orbitOn = false
@@ -1291,7 +1291,7 @@ local function alreadyOrbiting(part)
     return false
 end
 
-local function tryAbsorb(obj, root)
+local function tryAbsorb(obj)
     if not obj:IsA("BasePart") or obj.Anchored then return end
     if alreadyOrbiting(obj) then return end
     for _, p in ipairs(Players:GetPlayers()) do
@@ -1313,35 +1313,54 @@ local function tryAbsorb(obj, root)
     })
 end
 
-Reg("orbit", {"orb"}, "Toggle orbit — pulls nearby objects into orbit around you", false, function(a)
+Reg("orbit", {"orb"}, "Toggle orbit | orbit off to stop", false, function(a)
     if orbitOn or (a[1] and a[1]:lower() == "off") then
         StopOrbit() return
     end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then Notify("Orbit", "No character", "error") return end
 
+    -- Immediate scan just like original working version
+    local collected = 0
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        local isChar = false
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character and obj:IsDescendantOf(p.Character) then
+                isChar = true break
+            end
+        end
+        if not isChar then
+            local dist = (obj.Position - root.Position).Magnitude
+            if dist <= 40 then
+                tryAbsorb(obj)
+                collected = collected + 1
+            end
+        end
+    end
+
+    if collected == 0 then
+        Notify("Orbit", "No objects found nearby", "warning") return
+    end
+
     orbitOn = true
     Config.ActiveCmds["Orbit"] = true
     RefreshActive()
-    Notify("Orbit", "On  |  orbit off to stop", "success", 4)
+    Notify("Orbit", collected.." objects orbiting  |  orbit off to stop", "success", 4)
 
     local scanTimer = 0
-
     orbitConn = RunService.Heartbeat:Connect(function(dt)
         if not orbitOn then return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Scan for new objects every 1.5s
+        -- Re-scan every 2s to pick up new objects as you walk around
         scanTimer = scanTimer + dt
-        if scanTimer >= 1.5 then
+        if scanTimer >= 2 then
             scanTimer = 0
             for _, obj in ipairs(workspace:GetDescendants()) do
                 local dist = (obj.Position - center).Magnitude
-                if dist <= 40 then
-                    tryAbsorb(obj, r)
-                end
+                if dist <= 40 then tryAbsorb(obj) end
             end
         end
 
@@ -1364,10 +1383,6 @@ Reg("orbit", {"orb"}, "Toggle orbit — pulls nearby objects into orbit around y
                 local bp = data.part:FindFirstChild("VCOrbitBP")
                 if bp then bp.Position = target end
             end)
-        end
-
-        if #orbitParts == 0 and scanTimer > 3 then
-            -- nothing to orbit, keep running in case objects appear
         end
     end)
 end)
