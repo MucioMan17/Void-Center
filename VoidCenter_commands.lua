@@ -1366,9 +1366,17 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
             end
             op.FilterDescendantsInstances = excludes
             local nearby = workspace:GetPartBoundsInRadius(center, 80, op)
+            local grabbed = 0
+            local skipped = 0
             for _, obj in ipairs(nearby) do
-                absorbPart(obj)
+                if isSafeToGrab(obj) and not alreadyOrbiting(obj) then
+                    absorbPart(obj)
+                    grabbed = grabbed + 1
+                else
+                    skipped = skipped + 1
+                end
             end
+            warn("[Infinity] Found:"..#nearby.." Grabbed:"..grabbed.." Skipped:"..skipped.." Orbiting:"..#infinityParts)
         end
 
         for i = #infinityParts, 1, -1 do
