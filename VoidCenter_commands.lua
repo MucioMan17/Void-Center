@@ -1263,52 +1263,10 @@ Reg("immortal", {"imm"}, "Toggle immortal mode (constant max health + zero knock
     end)
 end)
 
--- ── INFINITY (ORBIT) ─────────────────────────────────────────
--- Inspired by Gojo's Infinity — objects that come near get pulled
--- into orbit automatically. Anything trying to breach the barrier
--- gets pushed away. Nothing unanchored can touch you.
+-- ── INFINITY ─────────────────────────────────────────────────
 local infinityOn    = false
-local infinityParts = {}  -- { part, angle, radius, height, speed }
+local infinityParts = {}
 local infinityConn  = nil
-local INFINITY_BARRIER = 6   -- studs — nothing gets closer than this
-local INFINITY_PULL    = 20  -- studs — objects within this get absorbed
-local INFINITY_ORBIT   = 8   -- orbit ring radius
-
-local function isCharPart(obj)
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character and obj:IsDescendantOf(p.Character) then return true end
-    end
-    return false
-end
-
-local function alreadyOrbing(part)
-    for _, d in ipairs(infinityParts) do
-        if d.part == part then return true end
-    end
-    return false
-end
-
-local function absorbPart(part)
-    if alreadyOrbing(part) then return end
-    local bp = Instance.new("BodyPosition")
-    bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-    bp.P        = 2e4
-    bp.D        = 800
-    bp.Parent   = part
-    -- Also kill its velocity so it doesn't yank us
-    pcall(function()
-        part.AssemblyLinearVelocity  = Vector3.zero
-        part.AssemblyAngularVelocity = Vector3.zero
-    end)
-    table.insert(infinityParts, {
-        part   = part,
-        angle  = math.random() * math.pi * 2,
-        radius = INFINITY_ORBIT + math.random(-2, 2),
-        height = math.random(-3, 4),
-        speed  = math.random(60, 140) / 100,
-    })
-end
 
 local function StopInfinity()
     infinityOn = false
@@ -1322,22 +1280,59 @@ local function StopInfinity()
         end)
     end
     infinityParts = {}
-    Notify("Infinity", "Cursed Technique: Reversed  |  Off", "info")
+    Notify("Infinity", "Off", "info")
 end
 
-Reg("infinity", {"inf","gojo"}, "Toggle Infinity — objects orbit you and can never touch you", false, function(a)
+Reg("infinity", {"inf","gojo"}, "Pull nearby objects into orbit  e.g. infinity 40 | infinity off", false, function(a)
     if infinityOn or (a[1] and a[1]:lower() == "off") then
         StopInfinity() return
     end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then Notify("Infinity", "No character", "error") return end
 
+    local pullRange = tonumber(a[1]) or 30
+    local collected = 0
+
+    -- Gather all unanchored parts within pull range that aren't characters
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj.Anchored then
+            local isChar = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and obj:IsDescendantOf(p.Character) then
+                    isChar = true break
+                end
+            end
+            if not isChar then
+                local dist = (obj.Position - root.Position).Magnitude
+                if dist <= pullRange then
+                    local bp = Instance.new("BodyPosition")
+                    bp.Name     = "VCInfBP"
+                    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                    bp.Position = obj.Position
+                    bp.P        = 1e4
+                    bp.D        = 500
+                    bp.Parent   = obj
+                    table.insert(infinityParts, {
+                        part   = obj,
+                        angle  = math.random() * math.pi * 2,
+                        radius = 10 + math.random(-1, 1),
+                        height = math.random(-2, 3),
+                        speed  = math.random(80, 150) / 100,
+                    })
+                    collected = collected + 1
+                end
+            end
+        end
+    end
+
+    if collected == 0 then
+        Notify("Infinity", "No objects found within "..pullRange.." studs", "warning") return
+    end
+
     infinityOn = true
     Config.ActiveCmds["Infinity"] = true
     RefreshActive()
-    Notify("Infinity", "Cursed Technique: Infinity  |  Nothing can touch you", "success", 5)
-
-    local scanTimer = 0
+    Notify("Infinity", collected.." objects orbiting at 10 studs  |  infinity off to stop", "success", 4)
 
     infinityConn = RunService.Heartbeat:Connect(function(dt)
         if not infinityOn then return end
@@ -1345,29 +1340,12 @@ Reg("infinity", {"inf","gojo"}, "Toggle Infinity — objects orbit you and can n
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Only scan workspace every 0.5s — this is what caused lag
-        scanTimer = scanTimer + dt
-        if scanTimer >= 0.5 then
-            scanTimer = 0
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and not obj.Anchored and not isCharPart(obj) then
-                    local dist = (obj.Position - center).Magnitude
-                    if dist <= INFINITY_PULL and dist > INFINITY_BARRIER then
-                        absorbPart(obj)
-                    end
-                end
-            end
-        end
-
-        -- Update orbit + barrier every frame (lightweight, just math)
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
                 if not data.part or not data.part.Parent or data.part.Anchored then
-                    pcall(function()
-                        local bp = data.part:FindFirstChild("VCInfBP")
-                        if bp then bp:Destroy() end
-                    end)
+                    local bp = data.part and data.part:FindFirstChild("VCInfBP")
+                    if bp then bp:Destroy() end
                     table.remove(infinityParts, i)
                     return
                 end
@@ -1379,15 +1357,10 @@ Reg("infinity", {"inf","gojo"}, "Toggle Infinity — objects orbit you and can n
                 )
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
-                -- Push anything breaching the barrier
-                local dist = (data.part.Position - center).Magnitude
-                if dist < INFINITY_BARRIER then
-                    local pushDir = (data.part.Position - center)
-                    pushDir = pushDir.Magnitude > 0 and pushDir.Unit or Vector3.new(0,1,0)
-                    data.part.AssemblyLinearVelocity = pushDir * 60
-                end
             end)
         end
+
+        if #infinityParts == 0 then StopInfinity() end
     end)
 end)
 
