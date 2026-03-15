@@ -1337,33 +1337,29 @@ Reg("infinity", {"inf","gojo"}, "Toggle Infinity — objects orbit you and can n
     RefreshActive()
     Notify("Infinity", "Cursed Technique: Infinity  |  Nothing can touch you", "success", 5)
 
+    local scanTimer = 0
+
     infinityConn = RunService.Heartbeat:Connect(function(dt)
         if not infinityOn then return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Scan nearby parts and absorb or repel them
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and not obj.Anchored and not isCharPart(obj) then
-                local dist = (obj.Position - center).Magnitude
-                if dist <= INFINITY_PULL then
-                    if dist <= INFINITY_BARRIER then
-                        -- Too close — push it away instantly (the Infinity barrier)
-                        pcall(function()
-                            local pushDir = (obj.Position - center)
-                            pushDir = pushDir.Magnitude > 0 and pushDir.Unit or Vector3.new(0,1,0)
-                            obj.AssemblyLinearVelocity = pushDir * 80
-                        end)
-                    else
-                        -- Within pull range — absorb into orbit
+        -- Only scan workspace every 0.5s — this is what caused lag
+        scanTimer = scanTimer + dt
+        if scanTimer >= 0.5 then
+            scanTimer = 0
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj.Anchored and not isCharPart(obj) then
+                    local dist = (obj.Position - center).Magnitude
+                    if dist <= INFINITY_PULL and dist > INFINITY_BARRIER then
                         absorbPart(obj)
                     end
                 end
             end
         end
 
-        -- Update orbit positions
+        -- Update orbit + barrier every frame (lightweight, just math)
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
@@ -1383,7 +1379,7 @@ Reg("infinity", {"inf","gojo"}, "Toggle Infinity — objects orbit you and can n
                 )
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
-                -- Keep pushing anything that breaches the barrier
+                -- Push anything breaching the barrier
                 local dist = (data.part.Position - center).Magnitude
                 if dist < INFINITY_BARRIER then
                     local pushDir = (data.part.Position - center)
