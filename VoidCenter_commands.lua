@@ -1267,7 +1267,7 @@ end)
 local infinityOn    = false
 local infinityParts = {}
 local infinityConn  = nil
-local INFINITY_PULL = 50  -- fixed pull range, always 50 studs
+local INFINITY_PULL = 50
 
 local function isCharPart(obj)
     for _, p in ipairs(Players:GetPlayers()) do
@@ -1285,37 +1285,8 @@ end
 
 local function absorbPart(part, orbitRadius)
     if alreadyOrbiting(part) then return end
-    local old = part:FindFirstChild("VCInfBP")
-    if old then old:Destroy() end
-
-    -- Disable collision immediately so it can never physically touch you
-    pcall(function() part.CanCollide = false end)
-    -- Kill any existing velocity so it doesn't arrive with momentum
-    pcall(function()
-        part.AssemblyLinearVelocity  = Vector3.zero
-        part.AssemblyAngularVelocity = Vector3.zero
-    end)
-
-    -- Massless removes weight so we don't need extreme force values
-    -- which cause jitter on large objects
-    pcall(function() part.Massless = true end)
-
-    local bp = Instance.new("BodyPosition")
-    bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-    bp.Position = part.Position
-    bp.P        = 3000
-    bp.D        = 500
-    bp.Parent   = part
-
-    local bg = Instance.new("BodyGyro")
-    bg.Name      = "VCInfBG"
-    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-    bg.P         = 3000
-    bg.D         = 500
-    bg.CFrame    = part.CFrame
-    bg.Parent    = part
-
+    -- Anchor the part so physics doesn't fight us — we move it manually
+    pcall(function() part.Anchored = true end)
     table.insert(infinityParts, {
         part   = part,
         angle  = math.random() * math.pi * 2,
@@ -1332,19 +1303,16 @@ local function StopInfinity()
     if infinityConn then infinityConn:Disconnect() infinityConn = nil end
     for _, data in ipairs(infinityParts) do
         pcall(function()
-            local bp = data.part and data.part:FindFirstChild("VCInfBP")
-            local bg = data.part and data.part:FindFirstChild("VCInfBG")
-            if bp then bp:Destroy() end
-            if bg then bg:Destroy() end
-            pcall(function() data.part.Massless = false end)
-            pcall(function() data.part.CanCollide = true end)
+            if data.part and data.part.Parent then
+                data.part.Anchored = false
+            end
         end)
     end
     infinityParts = {}
     Notify("Infinity", "Off", "info")
 end
 
-Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distance) | infinity off", false, function(a)
+Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit  e.g. infinity 30 | infinity off", false, function(a)
     if infinityOn or (a[1] and a[1]:lower() == "off") then
         StopInfinity() return
     end
@@ -1355,7 +1323,7 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distan
     infinityOn = true
     Config.ActiveCmds["Infinity"] = true
     RefreshActive()
-    Notify("Infinity", "On  —  orbit "..orbitRadius.." studs  pull range "..INFINITY_PULL.."  |  infinity off to stop", "success", 5)
+    Notify("Infinity", "On  —  orbit "..orbitRadius.." studs  |  infinity off to stop", "success", 5)
 
     local scanTimer = 0
 
@@ -1365,69 +1333,40 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distan
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Scan every 2s using GetPartBoundsInRadius — only checks nearby parts
-        -- instead of every single descendant in workspace (much cheaper)
+        -- Scan every 2s using spatial query
         scanTimer = scanTimer + dt
         if scanTimer >= 2 then
             scanTimer = 0
-            local overlapParams = OverlapParams.new()
-            overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-            local charParts = {}
+            local op = OverlapParams.new()
+            op.FilterType = Enum.RaycastFilterType.Exclude
+            local excludes = {}
             for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character then
-                    for _, part in ipairs(p.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            table.insert(charParts, part)
-                        end
-                    end
-                end
+                if p.Character then table.insert(excludes, p.Character) end
             end
-            overlapParams.FilterDescendantsInstances = charParts
-            local nearby = workspace:GetPartBoundsInRadius(center, INFINITY_PULL, overlapParams)
+            op.FilterDescendantsInstances = excludes
+            local nearby = workspace:GetPartBoundsInRadius(center, INFINITY_PULL, op)
             for _, obj in ipairs(nearby) do
-                if not obj.Anchored then
+                if not isCharPart(obj) then
                     absorbPart(obj, orbitRadius)
                 end
             end
         end
 
-        -- Update orbit positions every frame
+        -- Move anchored parts directly to orbit position — no physics, no jitter
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
-                if not data.part or not data.part.Parent or data.part.Anchored then
-                    pcall(function()
-                        local bp = data.part and data.part:FindFirstChild("VCInfBP")
-                        local bg = data.part and data.part:FindFirstChild("VCInfBG")
-                        if bp then bp:Destroy() end
-                        if bg then bg:Destroy() end
-                        pcall(function() data.part.Massless = false end)
-                    end)
+                if not data.part or not data.part.Parent then
                     table.remove(infinityParts, i)
                     return
                 end
-                -- Keep collision disabled every frame in case the game resets it
-                pcall(function() data.part.CanCollide = false end)
-
                 data.angle = data.angle + dt * data.speed
                 local target = center + Vector3.new(
                     math.cos(data.angle) * data.radius,
                     data.height,
                     math.sin(data.angle) * data.radius
                 )
-                local bp = data.part:FindFirstChild("VCInfBP")
-                if bp then bp.Position = target end
-
-                -- Hard barrier — if anything breaches 5 studs instantly zero velocity
-                -- and push it back to its orbit target so it can never reach us
-                local dist = (data.part.Position - center).Magnitude
-                if dist < 5 then
-                    pcall(function()
-                        data.part.AssemblyLinearVelocity  = Vector3.zero
-                        data.part.AssemblyAngularVelocity = Vector3.zero
-                        if bp then bp.Position = target end
-                    end)
-                end
+                data.part.CFrame = CFrame.new(target)
             end)
         end
     end)
