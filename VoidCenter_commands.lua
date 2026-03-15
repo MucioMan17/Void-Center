@@ -1285,39 +1285,40 @@ end
 local function absorbPart(part)
     if alreadyOrbiting(part) then return end
     if part.Anchored then return end
+    -- Size filter: not too big (flings you), not too small (pointless)
     local s = part.Size
-    if s.X > 20 or s.Y > 20 or s.Z > 20 then return end
+    local maxDim = math.max(s.X, s.Y, s.Z)
+    local minDim = math.min(s.X, s.Y, s.Z)
+    if maxDim > 15 or minDim < 0.1 then return end
 
-    local old = part:FindFirstChild("VCInfBP")
-    if old then old:Destroy() end
-
-    -- Kill existing momentum before absorbing
+    -- Kill momentum on arrival
     pcall(function()
         part.AssemblyLinearVelocity  = Vector3.zero
         part.AssemblyAngularVelocity = Vector3.zero
     end)
 
+    -- BodyPosition makes it server visible
+    local old = part:FindFirstChild("VCInfBP")
+    if old then old:Destroy() end
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
     bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bp.P        = 1e5
+    bp.D        = 1e4
     bp.Position = part.Position
-    bp.P        = 1e4
-    bp.D        = 1e3
     bp.Parent   = part
 
-    -- Each part gets its own completely independent orbit parameters
-    -- tiltX and tiltZ create a tilted orbital plane so nothing is flat
     table.insert(infinityParts, {
-        part   = part,
-        angle  = math.random() * math.pi * 2,           -- random start position
-        radius = math.random(28, 42),                    -- varied distance from center
-        height = math.random(-8, 8),                     -- wide vertical spread
-        speed  = (math.random(20, 80) / 100) * (math.random(0,1) == 0 and 1 or -1), -- some go backwards
-        tiltX  = math.random(-30, 30) / 100,             -- tilts the orbit plane on X
-        tiltZ  = math.random(-30, 30) / 100,             -- tilts the orbit plane on Z
-        wobble = math.random() * math.pi * 2,            -- individual wobble offset
-        wobbleSpeed = math.random(30, 80) / 100,         -- wobble rate
-        wobbleAmt   = math.random(2, 6),                 -- how much it wobbles
+        part        = part,
+        angle       = math.random() * math.pi * 2,
+        radius      = math.random(28, 42),
+        height      = math.random(-8, 8),
+        speed       = (math.random(25, 55) / 100) * (math.random(0,1) == 0 and 1 or -1),
+        tiltX       = math.random(-30, 30) / 100,
+        tiltZ       = math.random(-30, 30) / 100,
+        wobble      = math.random() * math.pi * 2,
+        wobbleSpeed = math.random(20, 50) / 100,
+        wobbleAmt   = math.random(1, 4),
     })
 end
 
@@ -1373,7 +1374,6 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
             end
         end
 
-        -- Update each part with its own independent chaotic path
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
@@ -1389,33 +1389,25 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
                 data.angle  = data.angle  + dt * data.speed
                 data.wobble = data.wobble + dt * data.wobbleSpeed
 
-                -- Base orbit position
                 local x = math.cos(data.angle) * data.radius
                 local z = math.sin(data.angle) * data.radius
-                local y = data.height
-
-                -- Apply tilt to the orbital plane so each object orbits on a different axis
                 local tx = x + z * data.tiltX
                 local tz = z + x * data.tiltZ
+                local ty = data.height + math.sin(data.wobble) * data.wobbleAmt
 
-                -- Add independent wobble so objects drift in and out slightly
-                local wobbleOffset = math.sin(data.wobble) * data.wobbleAmt
+                local target = center + Vector3.new(tx, ty, tz)
 
-                local target = center + Vector3.new(
-                    tx,
-                    y + wobbleOffset,
-                    tz
-                )
-
+                -- BodyPosition tells the server where it should be
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
 
-                -- Zero velocity every frame so physics can never build up
-                -- and fling the part out of orbit
-                pcall(function()
-                    data.part.AssemblyLinearVelocity  = Vector3.zero
-                    data.part.AssemblyAngularVelocity = Vector3.zero
-                end)
+                -- CFrame enforces it on our client so it never drifts
+                -- Combined they give a solid hold that looks right to everyone
+                data.part.CFrame = CFrame.new(target)
+
+                -- Zero velocity so nothing can build momentum and escape
+                data.part.AssemblyLinearVelocity  = Vector3.zero
+                data.part.AssemblyAngularVelocity = Vector3.zero
             end)
         end
     end)
