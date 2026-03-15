@@ -1268,6 +1268,7 @@ local infinityOn    = false
 local infinityParts = {}
 local infinityConn  = nil
 local INFINITY_PULL = 50
+local MAX_PART_SIZE = 20  -- ignore parts bigger than this in any dimension
 
 local function isCharPart(obj)
     for _, p in ipairs(Players:GetPlayers()) do
@@ -1286,25 +1287,19 @@ end
 local function absorbPart(part, orbitRadius)
     if alreadyOrbiting(part) then return end
     if part.Anchored then return end
+    -- Skip parts that are too big — they fling the player
+    local s = part.Size
+    if s.X > MAX_PART_SIZE or s.Y > MAX_PART_SIZE or s.Z > MAX_PART_SIZE then return end
 
-    -- Remove any old BP
-    local old = part:FindFirstChild("VCInfBP")
-    if old then old:Destroy() end
-
-    local bp = Instance.new("BodyPosition")
-    bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e4, 1e4, 1e4)
-    bp.Position = part.Position
-    bp.P        = 500
-    bp.D        = 800   -- high damping = slow smooth movement, no overshooting
-    bp.Parent   = part
+    -- Anchor client-side so we can move by CFrame with zero jitter
+    part.Anchored = true
 
     table.insert(infinityParts, {
         part   = part,
         angle  = math.random() * math.pi * 2,
-        radius = orbitRadius,
-        height = math.random(-2, 3),
-        speed  = math.random(40, 80) / 100,  -- slow orbit so nothing swings into you
+        radius = orbitRadius + math.random(-2, 2),
+        height = math.random(-3, 4),
+        speed  = math.random(50, 130) / 100,
     })
 end
 
@@ -1315,8 +1310,9 @@ local function StopInfinity()
     if infinityConn then infinityConn:Disconnect() infinityConn = nil end
     for _, data in ipairs(infinityParts) do
         pcall(function()
-            local bp = data.part and data.part:FindFirstChild("VCInfBP")
-            if bp then bp:Destroy() end
+            if data.part and data.part.Parent then
+                data.part.Anchored = false
+            end
         end)
     end
     infinityParts = {}
@@ -1357,24 +1353,17 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit  e.g. infinity 30 | infin
             op.FilterDescendantsInstances = excludes
             local nearby = workspace:GetPartBoundsInRadius(center, INFINITY_PULL, op)
             for _, obj in ipairs(nearby) do
-                if not obj.Anchored and not isCharPart(obj) then
+                if not isCharPart(obj) then
                     absorbPart(obj, orbitRadius)
                 end
             end
         end
 
-        -- Update orbit target positions
+        -- Move parts directly by CFrame — perfectly smooth, no jitter, no weight issues
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
                 if not data.part or not data.part.Parent then
-                    table.remove(infinityParts, i)
-                    return
-                end
-                -- If part got anchored by the game, release it from orbit
-                if data.part.Anchored then
-                    local bp = data.part:FindFirstChild("VCInfBP")
-                    if bp then bp:Destroy() end
                     table.remove(infinityParts, i)
                     return
                 end
@@ -1384,8 +1373,7 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit  e.g. infinity 30 | infin
                     data.height,
                     math.sin(data.angle) * data.radius
                 )
-                local bp = data.part:FindFirstChild("VCInfBP")
-                if bp then bp.Position = target end
+                data.part.CFrame = CFrame.new(target)
             end)
         end
     end)
