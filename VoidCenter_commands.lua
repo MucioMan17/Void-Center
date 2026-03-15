@@ -1296,26 +1296,25 @@ local function absorbPart(part, orbitRadius)
         part.AssemblyAngularVelocity = Vector3.zero
     end)
 
-    -- Use massive force so even the heaviest objects can't escape orbit
+    -- Massless removes weight so we don't need extreme force values
+    -- which cause jitter on large objects
+    pcall(function() part.Massless = true end)
+
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bp.MaxForce = Vector3.new(1e6, 1e6, 1e6)
     bp.Position = part.Position
-    bp.P        = 1e5
-    bp.D        = 1e3
+    bp.P        = 3000
+    bp.D        = 500
     bp.Parent   = part
 
-    -- Lock rotation so parts don't spin out and destabilize
     local bg = Instance.new("BodyGyro")
     bg.Name      = "VCInfBG"
-    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bg.P         = 1e5
-    bg.D         = 1e3
+    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    bg.P         = 3000
+    bg.D         = 500
     bg.CFrame    = part.CFrame
     bg.Parent    = part
-
-    -- Make massless so it has no weight fighting the force
-    pcall(function() part.Massless = true end)
 
     table.insert(infinityParts, {
         part   = part,
@@ -1366,16 +1365,28 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distan
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Scan every 0.8s so it keeps pulling new objects without lagging
+        -- Scan every 2s using GetPartBoundsInRadius — only checks nearby parts
+        -- instead of every single descendant in workspace (much cheaper)
         scanTimer = scanTimer + dt
-        if scanTimer >= 0.8 then
+        if scanTimer >= 2 then
             scanTimer = 0
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and not obj.Anchored and not isCharPart(obj) then
-                    local dist = (obj.Position - center).Magnitude
-                    if dist <= INFINITY_PULL then
-                        absorbPart(obj, orbitRadius)
+            local overlapParams = OverlapParams.new()
+            overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+            local charParts = {}
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character then
+                    for _, part in ipairs(p.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            table.insert(charParts, part)
+                        end
                     end
+                end
+            end
+            overlapParams.FilterDescendantsInstances = charParts
+            local nearby = workspace:GetPartBoundsInRadius(center, INFINITY_PULL, overlapParams)
+            for _, obj in ipairs(nearby) do
+                if not obj.Anchored then
+                    absorbPart(obj, orbitRadius)
                 end
             end
         end
