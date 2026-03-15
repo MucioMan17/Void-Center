@@ -1263,6 +1263,117 @@ Reg("immortal", {"imm"}, "Toggle immortal mode (constant max health + zero knock
     end)
 end)
 
+-- ── ORBIT ────────────────────────────────────────────────────
+local orbitOn    = false
+local orbitParts = {}  -- { part, angle, radius, height, speed }
+local orbitConn  = nil
+
+local function StopOrbit()
+    orbitOn = false
+    Config.ActiveCmds["Orbit"] = nil
+    RefreshActive()
+    if orbitConn then orbitConn:Disconnect() orbitConn = nil end
+    -- Remove BodyPositions and restore parts
+    for _, data in ipairs(orbitParts) do
+        pcall(function()
+            local bp = data.part:FindFirstChild("VCOrbitBP")
+            if bp then bp:Destroy() end
+        end)
+    end
+    orbitParts = {}
+    Notify("Orbit", "Off", "info")
+end
+
+Reg("orbit", {"orb"}, "Pull nearby objects into orbit  e.g. orbit 30 | orbit off", false, function(a)
+    if orbitOn or (a[1] and a[1]:lower() == "off") then
+        StopOrbit() return
+    end
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not root then Notify("Orbit", "No character", "error") return end
+
+    local radius    = tonumber(a[1]) or 30
+    local collected = 0
+
+    -- Gather all unanchored parts within radius that aren't characters
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj.Anchored then
+            -- Skip character parts
+            local isChar = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and obj:IsDescendantOf(p.Character) then
+                    isChar = true break
+                end
+            end
+            if not isChar then
+                local dist = (obj.Position - root.Position).Magnitude
+                if dist <= radius then
+                    -- Attach a BodyPosition to control it
+                    local bp = Instance.new("BodyPosition")
+                    bp.Name      = "VCOrbitBP"
+                    bp.MaxForce  = Vector3.new(1e5, 1e5, 1e5)
+                    bp.Position  = obj.Position
+                    bp.P         = 1e4
+                    bp.D         = 500
+                    bp.Parent    = obj
+                    table.insert(orbitParts, {
+                        part   = obj,
+                        angle  = math.random() * math.pi * 2,  -- spread them out
+                        radius = math.random(4, 8),            -- orbit ring size
+                        height = math.random(-2, 3),           -- slight vertical spread
+                        speed  = math.random(80, 150) / 100,   -- varied speeds
+                    })
+                    collected = collected + 1
+                end
+            end
+        end
+    end
+
+    if collected == 0 then
+        Notify("Orbit", "No objects found within "..radius.." studs", "warning") return
+    end
+
+    orbitOn = true
+    Config.ActiveCmds["Orbit"] = true
+    RefreshActive()
+    Notify("Orbit", collected.." objects orbiting  |  orbit off to stop", "success", 4)
+
+    local t = 0
+    orbitConn = RunService.Heartbeat:Connect(function(dt)
+        if not orbitOn then return end
+        t = t + dt
+        local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not r then return end
+        local center = r.Position + Vector3.new(0, 2, 0)
+
+        for i = #orbitParts, 1, -1 do
+            local data = orbitParts[i]
+            pcall(function()
+                -- Remove if part got destroyed or anchored
+                if not data.part or not data.part.Parent or data.part.Anchored then
+                    local bp = data.part and data.part:FindFirstChild("VCOrbitBP")
+                    if bp then bp:Destroy() end
+                    table.remove(orbitParts, i)
+                    return
+                end
+                -- Advance angle
+                data.angle = data.angle + dt * data.speed
+                -- Target position in orbit ring
+                local target = center + Vector3.new(
+                    math.cos(data.angle) * data.radius,
+                    data.height,
+                    math.sin(data.angle) * data.radius
+                )
+                data.part:FindFirstChild("VCOrbitBP").Position = target
+            end)
+        end
+
+        -- Stop if all parts are gone
+        if #orbitParts == 0 then
+            StopOrbit()
+        end
+    end)
+end)
+
 -- ── INFINITE JUMP ────────────────────────────────────────────
 local ijOn   = false
 local ijConn = nil
