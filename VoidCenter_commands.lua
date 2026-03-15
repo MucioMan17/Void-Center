@@ -1291,6 +1291,12 @@ local function absorbPart(part)
     local old = part:FindFirstChild("VCInfBP")
     if old then old:Destroy() end
 
+    -- Kill existing momentum before absorbing
+    pcall(function()
+        part.AssemblyLinearVelocity  = Vector3.zero
+        part.AssemblyAngularVelocity = Vector3.zero
+    end)
+
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
     bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
@@ -1403,6 +1409,13 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
 
                 local bp = data.part:FindFirstChild("VCInfBP")
                 if bp then bp.Position = target end
+
+                -- Zero velocity every frame so physics can never build up
+                -- and fling the part out of orbit
+                pcall(function()
+                    data.part.AssemblyLinearVelocity  = Vector3.zero
+                    data.part.AssemblyAngularVelocity = Vector3.zero
+                end)
             end)
         end
     end)
