@@ -1304,8 +1304,10 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
     for _, obj in ipairs(nearby) do
         if #orbitData >= 25 then break end
         if not obj.Anchored then
-            local s = obj.Size
-            if math.max(s.X, s.Y, s.Z) <= 20 then
+            local s   = obj.Size
+            local mass = obj:GetMass()
+            -- Skip anything too big or too heavy
+            if math.max(s.X, s.Y, s.Z) <= 8 and mass <= 50 then
                 table.insert(orbitData, {
                     part   = obj,
                     origCF = obj.CFrame,
