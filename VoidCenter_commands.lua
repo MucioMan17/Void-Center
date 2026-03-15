@@ -1266,14 +1266,13 @@ end)
 -- ── INFINITY ─────────────────────────────────────────────────
 local infinityOn   = false
 local infinityConn = nil
-local orbitData    = {}  -- { part, origCF, angle, height, speed }
+local orbitData    = {}
 
 local function StopInfinity()
     infinityOn = false
     Config.ActiveCmds["Infinity"] = nil
     RefreshActive()
     if infinityConn then infinityConn:Disconnect() infinityConn = nil end
-    -- Return all parts to original positions
     for _, d in ipairs(orbitData) do
         pcall(function()
             if d.part and d.part.Parent then
@@ -1292,7 +1291,6 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then Notify("Infinity", "No character", "error") return end
 
-    -- Scan once for nearby unanchored small parts
     local center = root.Position + Vector3.new(0, 2, 0)
     local op = OverlapParams.new()
     op.FilterType = Enum.RaycastFilterType.Exclude
