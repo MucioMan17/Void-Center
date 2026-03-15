@@ -1267,6 +1267,41 @@ end)
 local infinityOn    = false
 local infinityParts = {}
 local infinityConn  = nil
+local INFINITY_PULL = 50  -- fixed pull range, always 50 studs
+
+local function isCharPart(obj)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character and obj:IsDescendantOf(p.Character) then return true end
+    end
+    return false
+end
+
+local function alreadyOrbiting(part)
+    for _, d in ipairs(infinityParts) do
+        if d.part == part then return true end
+    end
+    return false
+end
+
+local function absorbPart(part, orbitRadius)
+    if alreadyOrbiting(part) then return end
+    local old = part:FindFirstChild("VCInfBP")
+    if old then old:Destroy() end
+    local bp = Instance.new("BodyPosition")
+    bp.Name     = "VCInfBP"
+    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bp.Position = part.Position
+    bp.P        = 1e4
+    bp.D        = 500
+    bp.Parent   = part
+    table.insert(infinityParts, {
+        part   = part,
+        angle  = math.random() * math.pi * 2,
+        radius = orbitRadius + math.random(-1, 1),
+        height = math.random(-2, 3),
+        speed  = math.random(60, 120) / 100,
+    })
+end
 
 local function StopInfinity()
     infinityOn = false
@@ -1275,7 +1310,7 @@ local function StopInfinity()
     if infinityConn then infinityConn:Disconnect() infinityConn = nil end
     for _, data in ipairs(infinityParts) do
         pcall(function()
-            local bp = data.part:FindFirstChild("VCInfBP")
+            local bp = data.part and data.part:FindFirstChild("VCInfBP")
             if bp then bp:Destroy() end
         end)
     end
@@ -1283,56 +1318,20 @@ local function StopInfinity()
     Notify("Infinity", "Off", "info")
 end
 
-Reg("infinity", {"inf","gojo"}, "Pull nearby objects into orbit  e.g. infinity 40 | infinity off", false, function(a)
+Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distance) | infinity off", false, function(a)
     if infinityOn or (a[1] and a[1]:lower() == "off") then
         StopInfinity() return
     end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then Notify("Infinity", "No character", "error") return end
 
-    local pullRange = tonumber(a[1]) or 30
-    local collected = 0
-
-    -- Gather all unanchored parts within pull range that aren't characters
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj.Anchored then
-            local isChar = false
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character and obj:IsDescendantOf(p.Character) then
-                    isChar = true break
-                end
-            end
-            if not isChar then
-                local dist = (obj.Position - root.Position).Magnitude
-                if dist <= pullRange then
-                    local bp = Instance.new("BodyPosition")
-                    bp.Name     = "VCInfBP"
-                    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-                    bp.Position = obj.Position
-                    bp.P        = 1e4
-                    bp.D        = 500
-                    bp.Parent   = obj
-                    table.insert(infinityParts, {
-                        part   = obj,
-                        angle  = math.random() * math.pi * 2,
-                        radius = 30 + math.random(-2, 2),
-                        height = math.random(-2, 3),
-                        speed  = math.random(80, 150) / 100,
-                    })
-                    collected = collected + 1
-                end
-            end
-        end
-    end
-
-    if collected == 0 then
-        Notify("Infinity", "No objects found within "..pullRange.." studs", "warning") return
-    end
-
+    local orbitRadius = tonumber(a[1]) or 30
     infinityOn = true
     Config.ActiveCmds["Infinity"] = true
     RefreshActive()
-    Notify("Infinity", collected.." objects orbiting at 10 studs  |  infinity off to stop", "success", 4)
+    Notify("Infinity", "On  —  orbit "..orbitRadius.." studs  pull range "..INFINITY_PULL.."  |  infinity off to stop", "success", 5)
+
+    local scanTimer = 0
 
     infinityConn = RunService.Heartbeat:Connect(function(dt)
         if not infinityOn then return end
@@ -1340,12 +1339,29 @@ Reg("infinity", {"inf","gojo"}, "Pull nearby objects into orbit  e.g. infinity 4
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
+        -- Scan every 0.8s so it keeps pulling new objects without lagging
+        scanTimer = scanTimer + dt
+        if scanTimer >= 0.8 then
+            scanTimer = 0
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj.Anchored and not isCharPart(obj) then
+                    local dist = (obj.Position - center).Magnitude
+                    if dist <= INFINITY_PULL then
+                        absorbPart(obj, orbitRadius)
+                    end
+                end
+            end
+        end
+
+        -- Update orbit positions every frame
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
                 if not data.part or not data.part.Parent or data.part.Anchored then
-                    local bp = data.part and data.part:FindFirstChild("VCInfBP")
-                    if bp then bp:Destroy() end
+                    pcall(function()
+                        local bp = data.part and data.part:FindFirstChild("VCInfBP")
+                        if bp then bp:Destroy() end
+                    end)
                     table.remove(infinityParts, i)
                     return
                 end
@@ -1359,11 +1375,8 @@ Reg("infinity", {"inf","gojo"}, "Pull nearby objects into orbit  e.g. infinity 4
                 if bp then bp.Position = target end
             end)
         end
-
-        if #infinityParts == 0 then StopInfinity() end
     end)
 end)
-
 -- ── INFINITE JUMP ────────────────────────────────────────────
 local ijOn   = false
 local ijConn = nil
