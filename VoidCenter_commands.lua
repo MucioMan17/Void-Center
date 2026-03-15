@@ -1301,9 +1301,8 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
     op.FilterDescendantsInstances = excludes
 
     local nearby = workspace:GetPartBoundsInRadius(center, 60, op)
-    local count  = 0
     for _, obj in ipairs(nearby) do
-        if count >= 25 then break end
+        if #orbitData >= 25 then break end
         if not obj.Anchored then
             local s = obj.Size
             if math.max(s.X, s.Y, s.Z) <= 20 then
@@ -1314,26 +1313,24 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
                     height = math.random(-8, 8),
                     speed  = 0.4,
                 })
-                count = count + 1
             end
         end
     end
 
-    if count == 0 then
+    if #orbitData == 0 then
         Notify("Infinity", "No objects found nearby", "warning") return
     end
 
     infinityOn = true
     Config.ActiveCmds["Infinity"] = true
     RefreshActive()
-    Notify("Infinity", "On  —  "..count.." objects  |  infinity off to stop", "success", 4)
+    Notify("Infinity", "On  —  "..(#orbitData).." objects  |  infinity off to stop", "success", 4)
 
     infinityConn = RunService.Heartbeat:Connect(function(dt)
         if not infinityOn then return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not r then return end
         local c = r.Position + Vector3.new(0, 2, 0)
-
         for i = #orbitData, 1, -1 do
             local d = orbitData[i]
             pcall(function()
