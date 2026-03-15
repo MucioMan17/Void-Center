@@ -1264,74 +1264,24 @@ Reg("immortal", {"imm"}, "Toggle immortal mode (constant max health + zero knock
 end)
 
 -- ── INFINITY ─────────────────────────────────────────────────
-local infinityOn    = false
-local infinityParts = {}
-local infinityConn  = nil
-
-local function isCharPart(obj)
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character and obj:IsDescendantOf(p.Character) then return true end
-    end
-    return false
-end
-
-local function alreadyOrbiting(part)
-    for _, d in ipairs(infinityParts) do
-        if d.part == part then return true end
-    end
-    return false
-end
-
-local function isSafeToGrab(part)
-    if part.Anchored then return false end
-    if isCharPart(part) then return false end
-    -- Only skip parts that are huge (will fling you)
-    local s = part.Size
-    if math.max(s.X, s.Y, s.Z) > 30 then return false end
-    return true
-end
-
-local function absorbPart(part)
-    if alreadyOrbiting(part) then return end
-    if not isSafeToGrab(part) then return end
-
-    pcall(function()
-        part.AssemblyLinearVelocity  = Vector3.zero
-        part.AssemblyAngularVelocity = Vector3.zero
-    end)
-
-    local old = part:FindFirstChild("VCInfBP")
-    if old then old:Destroy() end
-
-    local bp = Instance.new("BodyPosition")
-    bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-    bp.P        = 5e4
-    bp.D        = 5e3
-    bp.Position = part.Position
-    bp.Parent   = part
-
-    table.insert(infinityParts, {
-        part   = part,
-        angle  = math.random() * math.pi * 2, -- random start position on ring
-        radius = 35,                           -- all same distance
-        height = math.random(-10, 10),         -- each object on a different height plane
-        speed  = 0.4,                          -- all same direction and speed
-    })
-end
+local infinityOn   = false
+local infinityConn = nil
+local orbitData    = {}  -- { part, origCF, angle, height, speed }
 
 local function StopInfinity()
     infinityOn = false
     Config.ActiveCmds["Infinity"] = nil
     RefreshActive()
     if infinityConn then infinityConn:Disconnect() infinityConn = nil end
-    for _, data in ipairs(infinityParts) do
+    -- Return all parts to original positions
+    for _, d in ipairs(orbitData) do
         pcall(function()
-            local bp = data.part and data.part:FindFirstChild("VCInfBP")
-            if bp then bp:Destroy() end
+            if d.part and d.part.Parent then
+                d.part.CFrame = d.origCF
+            end
         end)
     end
-    infinityParts = {}
+    orbitData = {}
     Notify("Infinity", "Off", "info")
 end
 
@@ -1342,85 +1292,62 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then Notify("Infinity", "No character", "error") return end
 
+    -- Scan once for nearby unanchored small parts
+    local center = root.Position + Vector3.new(0, 2, 0)
+    local op = OverlapParams.new()
+    op.FilterType = Enum.RaycastFilterType.Exclude
+    local excludes = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then table.insert(excludes, p.Character) end
+    end
+    op.FilterDescendantsInstances = excludes
+
+    local nearby = workspace:GetPartBoundsInRadius(center, 60, op)
+    local count  = 0
+    for _, obj in ipairs(nearby) do
+        if count >= 25 then break end
+        if not obj.Anchored then
+            local s = obj.Size
+            if math.max(s.X, s.Y, s.Z) <= 20 then
+                table.insert(orbitData, {
+                    part   = obj,
+                    origCF = obj.CFrame,
+                    angle  = math.random() * math.pi * 2,
+                    height = math.random(-8, 8),
+                    speed  = 0.4,
+                })
+                count = count + 1
+            end
+        end
+    end
+
+    if count == 0 then
+        Notify("Infinity", "No objects found nearby", "warning") return
+    end
+
     infinityOn = true
     Config.ActiveCmds["Infinity"] = true
     RefreshActive()
-    -- Immediate first scan so objects start moving right away
-    local function doScan()
-        local r2 = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        if not r2 then return end
-        local c2 = r2.Position + Vector3.new(0, 2, 0)
-        local op = OverlapParams.new()
-        op.FilterType = Enum.RaycastFilterType.Exclude
-        local excludes = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character then table.insert(excludes, p.Character) end
-        end
-        op.FilterDescendantsInstances = excludes
-        local nearby = workspace:GetPartBoundsInRadius(c2, 80, op)
-        for _, obj in ipairs(nearby) do
-            if #infinityParts >= 30 then break end
-            absorbPart(obj)
-        end
-        Notify("Infinity", "On  —  "..#infinityParts.." objects  |  infinity off to stop", "success", 4)
-    end
-    doScan()
-
-    local scanTimer = 2  -- set to 2 so next scan happens after full interval
+    Notify("Infinity", "On  —  "..count.." objects  |  infinity off to stop", "success", 4)
 
     infinityConn = RunService.Heartbeat:Connect(function(dt)
         if not infinityOn then return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not r then return end
-        local center = r.Position + Vector3.new(0, 2, 0)
+        local c = r.Position + Vector3.new(0, 2, 0)
 
-        scanTimer = scanTimer + dt
-        if scanTimer >= 2 then
-            scanTimer = 0
-            -- Cap at 30 objects max so it doesn't grab the whole map
-            if #infinityParts < 30 then
-                local op = OverlapParams.new()
-                op.FilterType = Enum.RaycastFilterType.Exclude
-                local excludes = {}
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p.Character then table.insert(excludes, p.Character) end
-                end
-                op.FilterDescendantsInstances = excludes
-                local nearby = workspace:GetPartBoundsInRadius(center, 80, op)
-                for _, obj in ipairs(nearby) do
-                    if #infinityParts >= 30 then break end
-                    absorbPart(obj)
-                end
-            end
-        end
-
-        for i = #infinityParts, 1, -1 do
-            local data = infinityParts[i]
+        for i = #orbitData, 1, -1 do
+            local d = orbitData[i]
             pcall(function()
-                if not data.part or not data.part.Parent then
-                    table.remove(infinityParts, i) return
+                if not d.part or not d.part.Parent then
+                    table.remove(orbitData, i) return
                 end
-                if data.part.Anchored then
-                    local bp = data.part:FindFirstChild("VCInfBP")
-                    if bp then bp:Destroy() end
-                    table.remove(infinityParts, i) return
-                end
-
-                data.angle  = data.angle  + dt * data.speed
-                data.wobble = data.wobble + dt * data.wobbleSpeed
-
-                local target = center + Vector3.new(
-                    math.cos(data.angle) * data.radius,
-                    data.height,
-                    math.sin(data.angle) * data.radius
+                d.angle = d.angle + dt * d.speed
+                d.part.CFrame = CFrame.new(
+                    c.X + math.cos(d.angle) * 35,
+                    c.Y + d.height,
+                    c.Z + math.sin(d.angle) * 35
                 )
-
-                local bp = data.part:FindFirstChild("VCInfBP")
-                if bp then bp.Position = target end
-
-                -- Zero velocity so parts never build momentum and escape
-                data.part.AssemblyLinearVelocity  = Vector3.zero
-                data.part.AssemblyAngularVelocity = Vector3.zero
             end)
         end
     end)
