@@ -1223,6 +1223,46 @@ Reg("voidspam", {"vs"}, "Toggle void spam", false, function()
     end)
 end)
 
+-- ── IMMORTAL ─────────────────────────────────────────────────
+-- Constantly resets health to max and zeroes out any knockback
+-- velocity every heartbeat — taken from sniper bot health logic
+local immortalOn   = false
+local immortalConn = nil
+
+Reg("immortal", {"imm"}, "Toggle immortal mode (constant max health + zero knockback)", false, function()
+    if immortalOn then
+        immortalOn = false
+        Config.ActiveCmds["Immortal"] = nil
+        RefreshActive()
+        if immortalConn then immortalConn:Disconnect() immortalConn = nil end
+        Notify("Immortal", "Off", "info")
+        return
+    end
+    immortalOn = true
+    Config.ActiveCmds["Immortal"] = true
+    RefreshActive()
+    Notify("Immortal", "On  —  health locked to max, knockback zeroed", "success")
+    immortalConn = RunService.Heartbeat:Connect(function()
+        if not immortalOn then return end
+        local c   = LP.Character
+        local hum = c and c:FindFirstChildOfClass("Humanoid")
+        local hrp = c and c:FindFirstChild("HumanoidRootPart")
+        if not c or not hum then return end
+        -- Lock health to max
+        if hum.Health > 0 then
+            hum.Health = hum.MaxHealth
+        end
+        -- Zero out any fling/knockback velocity
+        if hrp then
+            local vel = hrp.AssemblyLinearVelocity
+            if vel.Magnitude > 50 then
+                hrp.AssemblyLinearVelocity  = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+    end)
+end)
+
 -- ── INFINITE JUMP ────────────────────────────────────────────
 local ijOn   = false
 local ijConn = nil
@@ -1252,6 +1292,24 @@ LP.CharacterAdded:Connect(function()
     if flyOn      then flyOn  = false task.wait(0.2) StartFly()    end
     if ncOn       then ncOn   = false task.wait(0.1) StartNoclip() end
     if godOn      then godOn  = false task.wait(0.3) StartGod()    end
+    if immortalOn then
+        if immortalConn then immortalConn:Disconnect() immortalConn = nil end
+        immortalConn = RunService.Heartbeat:Connect(function()
+            if not immortalOn then return end
+            local c   = LP.Character
+            local hum = c and c:FindFirstChildOfClass("Humanoid")
+            local hrp = c and c:FindFirstChild("HumanoidRootPart")
+            if not c or not hum then return end
+            if hum.Health > 0 then hum.Health = hum.MaxHealth end
+            if hrp then
+                local vel = hrp.AssemblyLinearVelocity
+                if vel.Magnitude > 50 then
+                    hrp.AssemblyLinearVelocity  = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
+        end)
+    end
     if vspamOn then
         if vspamConn then vspamConn:Disconnect() vspamConn = nil end
         local inVoid2 = false
