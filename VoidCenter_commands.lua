@@ -1288,7 +1288,7 @@ local function isSafeToGrab(part)
     -- Skip parts that are clearly map geometry:
     -- 1. Too big
     local s = part.Size
-    if math.max(s.X, s.Y, s.Z) > 12 then return false end
+    if math.max(s.X, s.Y, s.Z) > 20 then return false end
     -- 2. Part of a large model with many parts (likely map)
     local parent = part.Parent
     if parent and parent:IsA("Model") then
@@ -1296,7 +1296,7 @@ local function isSafeToGrab(part)
         for _, c in ipairs(parent:GetChildren()) do
             if c:IsA("BasePart") then
                 count = count + 1
-                if count > 8 then return false end
+                if count > 20 then return false end
             end
         end
     end
@@ -1330,14 +1330,11 @@ local function absorbPart(part)
     bp.Parent   = part
 
     table.insert(infinityParts, {
-        part        = part,
-        angle       = math.random() * math.pi * 2, -- spread around the ring
-        radius      = 35,                           -- all same distance
-        height      = math.random(-2, 2),           -- slight vertical variation
-        speed       = 0.5,                          -- all same direction, same speed
-        wobble      = math.random() * math.pi * 2, -- individual wobble offset
-        wobbleSpeed = math.random(30, 60) / 100,   -- slightly different wobble rates
-        wobbleAmt   = math.random(1, 3),           -- small drift in and out
+        part   = part,
+        angle  = math.random() * math.pi * 2, -- random start position on ring
+        radius = 35,                           -- all same distance
+        height = math.random(-10, 10),         -- each object on a different height plane
+        speed  = 0.4,                          -- all same direction and speed
     })
 end
 
@@ -1386,7 +1383,7 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
                 if p.Character then table.insert(excludes, p.Character) end
             end
             op.FilterDescendantsInstances = excludes
-            local nearby = workspace:GetPartBoundsInRadius(center, 50, op)
+            local nearby = workspace:GetPartBoundsInRadius(center, 80, op)
             for _, obj in ipairs(nearby) do
                 absorbPart(obj)
             end
@@ -1407,13 +1404,10 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit", false, function(a)
                 data.angle  = data.angle  + dt * data.speed
                 data.wobble = data.wobble + dt * data.wobbleSpeed
 
-                -- All on same ring, same radius, same direction
-                -- wobble adds small random drift so they feel alive not robotic
-                local wobbleOffset = math.sin(data.wobble) * data.wobbleAmt
                 local target = center + Vector3.new(
-                    math.cos(data.angle) * (data.radius + wobbleOffset),
-                    data.height + math.sin(data.wobble * 0.7) * 1.5,
-                    math.sin(data.angle) * (data.radius + wobbleOffset)
+                    math.cos(data.angle) * data.radius,
+                    data.height,
+                    math.sin(data.angle) * data.radius
                 )
 
                 local bp = data.part:FindFirstChild("VCInfBP")
