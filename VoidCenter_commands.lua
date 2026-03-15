@@ -1296,13 +1296,26 @@ local function absorbPart(part, orbitRadius)
         part.AssemblyAngularVelocity = Vector3.zero
     end)
 
+    -- Use massive force so even the heaviest objects can't escape orbit
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(5e3, 5e3, 5e3)
+    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     bp.Position = part.Position
-    bp.P        = 1200
-    bp.D        = 400
+    bp.P        = 1e5
+    bp.D        = 1e3
     bp.Parent   = part
+
+    -- Lock rotation so parts don't spin out and destabilize
+    local bg = Instance.new("BodyGyro")
+    bg.Name      = "VCInfBG"
+    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bg.P         = 1e5
+    bg.D         = 1e3
+    bg.CFrame    = part.CFrame
+    bg.Parent    = part
+
+    -- Make massless so it has no weight fighting the force
+    pcall(function() part.Massless = true end)
 
     table.insert(infinityParts, {
         part   = part,
@@ -1321,7 +1334,11 @@ local function StopInfinity()
     for _, data in ipairs(infinityParts) do
         pcall(function()
             local bp = data.part and data.part:FindFirstChild("VCInfBP")
+            local bg = data.part and data.part:FindFirstChild("VCInfBG")
             if bp then bp:Destroy() end
+            if bg then bg:Destroy() end
+            pcall(function() data.part.Massless = false end)
+            pcall(function() data.part.CanCollide = true end)
         end)
     end
     infinityParts = {}
@@ -1370,7 +1387,10 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity  e.g. infinity 30 (orbit distan
                 if not data.part or not data.part.Parent or data.part.Anchored then
                     pcall(function()
                         local bp = data.part and data.part:FindFirstChild("VCInfBP")
+                        local bg = data.part and data.part:FindFirstChild("VCInfBG")
                         if bp then bp:Destroy() end
+                        if bg then bg:Destroy() end
+                        pcall(function() data.part.Massless = false end)
                     end)
                     table.remove(infinityParts, i)
                     return
