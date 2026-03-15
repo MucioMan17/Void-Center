@@ -1285,14 +1285,26 @@ end
 
 local function absorbPart(part, orbitRadius)
     if alreadyOrbiting(part) then return end
-    -- Anchor the part so physics doesn't fight us — we move it manually
-    pcall(function() part.Anchored = true end)
+    if part.Anchored then return end
+
+    -- Remove any old BP
+    local old = part:FindFirstChild("VCInfBP")
+    if old then old:Destroy() end
+
+    local bp = Instance.new("BodyPosition")
+    bp.Name     = "VCInfBP"
+    bp.MaxForce = Vector3.new(1e4, 1e4, 1e4)
+    bp.Position = part.Position
+    bp.P        = 500
+    bp.D        = 800   -- high damping = slow smooth movement, no overshooting
+    bp.Parent   = part
+
     table.insert(infinityParts, {
         part   = part,
         angle  = math.random() * math.pi * 2,
-        radius = orbitRadius + math.random(-1, 1),
+        radius = orbitRadius,
         height = math.random(-2, 3),
-        speed  = math.random(60, 120) / 100,
+        speed  = math.random(40, 80) / 100,  -- slow orbit so nothing swings into you
     })
 end
 
@@ -1303,9 +1315,8 @@ local function StopInfinity()
     if infinityConn then infinityConn:Disconnect() infinityConn = nil end
     for _, data in ipairs(infinityParts) do
         pcall(function()
-            if data.part and data.part.Parent then
-                data.part.Anchored = false
-            end
+            local bp = data.part and data.part:FindFirstChild("VCInfBP")
+            if bp then bp:Destroy() end
         end)
     end
     infinityParts = {}
@@ -1333,7 +1344,7 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit  e.g. infinity 30 | infin
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Scan every 2s using spatial query
+        -- Scan every 2s
         scanTimer = scanTimer + dt
         if scanTimer >= 2 then
             scanTimer = 0
@@ -1346,17 +1357,24 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit  e.g. infinity 30 | infin
             op.FilterDescendantsInstances = excludes
             local nearby = workspace:GetPartBoundsInRadius(center, INFINITY_PULL, op)
             for _, obj in ipairs(nearby) do
-                if not isCharPart(obj) then
+                if not obj.Anchored and not isCharPart(obj) then
                     absorbPart(obj, orbitRadius)
                 end
             end
         end
 
-        -- Move anchored parts directly to orbit position — no physics, no jitter
+        -- Update orbit target positions
         for i = #infinityParts, 1, -1 do
             local data = infinityParts[i]
             pcall(function()
                 if not data.part or not data.part.Parent then
+                    table.remove(infinityParts, i)
+                    return
+                end
+                -- If part got anchored by the game, release it from orbit
+                if data.part.Anchored then
+                    local bp = data.part:FindFirstChild("VCInfBP")
+                    if bp then bp:Destroy() end
                     table.remove(infinityParts, i)
                     return
                 end
@@ -1366,7 +1384,8 @@ Reg("infinity", {"inf","gojo"}, "Toggle infinity orbit  e.g. infinity 30 | infin
                     data.height,
                     math.sin(data.angle) * data.radius
                 )
-                data.part.CFrame = CFrame.new(target)
+                local bp = data.part:FindFirstChild("VCInfBP")
+                if bp then bp.Position = target end
             end)
         end
     end)
