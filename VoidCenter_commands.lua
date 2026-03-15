@@ -1285,27 +1285,9 @@ end
 local function isSafeToGrab(part)
     if part.Anchored then return false end
     if isCharPart(part) then return false end
-    -- Skip parts that are clearly map geometry:
-    -- 1. Too big
+    -- Only skip parts that are huge (will fling you)
     local s = part.Size
-    if math.max(s.X, s.Y, s.Z) > 20 then return false end
-    -- 2. Part of a large model with many parts (likely map)
-    local parent = part.Parent
-    if parent and parent:IsA("Model") then
-        local count = 0
-        for _, c in ipairs(parent:GetChildren()) do
-            if c:IsA("BasePart") then
-                count = count + 1
-                if count > 20 then return false end
-            end
-        end
-    end
-    -- 3. Named like map parts
-    local name = part.Name:lower()
-    if name == "baseplate" or name == "floor" or name == "wall"
-    or name == "ceiling" or name == "ground" or name == "terrain" then
-        return false
-    end
+    if math.max(s.X, s.Y, s.Z) > 30 then return false end
     return true
 end
 
