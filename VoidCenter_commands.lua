@@ -1289,10 +1289,10 @@ local function absorbPart(part, orbitRadius)
     if old then old:Destroy() end
     local bp = Instance.new("BodyPosition")
     bp.Name     = "VCInfBP"
-    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bp.MaxForce = Vector3.new(2e3, 2e3, 2e3)  -- gentle force, won't fling you
     bp.Position = part.Position
-    bp.P        = 1e4
-    bp.D        = 500
+    bp.P        = 800   -- slow acceleration into orbit
+    bp.D        = 200   -- high damping so it doesn't overshoot
     bp.Parent   = part
     table.insert(infinityParts, {
         part   = part,
