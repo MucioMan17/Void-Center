@@ -453,9 +453,19 @@ local function Notify(title, body, kind, dur)
     }, track)
     Corner(2, prog)
 
-    -- Animate in
-    Tween(card, TS, {Position = UDim2.new(0, 0, 0, 0)})
+    -- Animate in with bounce
+    Tween(card, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Position = UDim2.new(0, 0, 0, 0)})
     Tween(prog, TweenInfo.new(dur, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)})
+    -- Pulse the icon pill on arrival
+    task.spawn(function()
+        task.wait(0.1)
+        Tween(ipill, TweenInfo.new(0.15, Enum.EasingStyle.Quad),
+            {BackgroundTransparency = 0.2})
+        task.wait(0.15)
+        Tween(ipill, TweenInfo.new(0.3, Enum.EasingStyle.Quad),
+            {BackgroundTransparency = 0.72})
+    end)
 
     local alive = true
     local function dismiss()
@@ -479,16 +489,24 @@ end
 local Panel = N("Frame", {
     Name                   = "VCHud",
     BackgroundColor3       = C.Panel,
-    BackgroundTransparency = 0.12,
+    BackgroundTransparency = 1,  -- start invisible
     BorderSizePixel        = 0,
-    Position               = UDim2.new(0, 8, 0, 8),
-    Size                   = UDim2.new(0, 0, 0, 28),  -- width driven by AutomaticSize
+    Position               = UDim2.new(0, 8, 0, -40),  -- start above screen
+    Size                   = UDim2.new(0, 0, 0, 28),
     AutomaticSize          = Enum.AutomaticSize.X,
     ZIndex                 = 200,
     Active                 = true,
 }, Screen)
 Corner(8, Panel)
 Stroke(C.Accent, 1, Panel)
+
+-- Animate HUD sliding down into place after startup finishes
+task.delay(3.5, function()
+    Tween(Panel, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position               = UDim2.new(0, 8, 0, 8),
+        BackgroundTransparency = 0.12,
+    })
+end)
 
 -- Horizontal list layout — each child sits side by side
 local PList = N("UIListLayout", {
@@ -635,6 +653,13 @@ local function RefreshActive()
     else
         LblActive.Text      = table.concat(list, "  |  ")
         DivActive.Visible   = true
+        -- Pulse active text colour briefly to signal change
+        Tween(LblActive, TweenInfo.new(0.1, Enum.EasingStyle.Quad),
+            {TextColor3 = Color3.fromRGB(255, 255, 255)})
+        task.delay(0.1, function()
+            Tween(LblActive, TweenInfo.new(0.3, Enum.EasingStyle.Quad),
+                {TextColor3 = C.AcctBr})
+        end)
     end
 end
 
@@ -821,21 +846,40 @@ end)
 
 local function OpenCmd()
     CmdOpen = true
+    Dimmer.BackgroundTransparency = 1
     Dimmer.Visible    = true
+    CmdFrame.Size     = UDim2.new(0, 530, 0, 46)
+    CmdFrame.Position = UDim2.new(0.5, 0, 0.33, 0)
+    CmdFrame.BackgroundTransparency = 0.3
     CmdFrame.Visible  = true
-    CmdFrame.Position = UDim2.new(0.5,0,0.3,0)
-    Tween(CmdFrame, TS, {Position = UDim2.new(0.5,0,0.37,0)})
+    -- Fade dimmer in
+    Tween(Dimmer, TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+        {BackgroundTransparency = 0.5})
+    -- Scale and slide command bar in
+    Tween(CmdFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size     = UDim2.new(0, 560, 0, 52),
+        Position = UDim2.new(0.5, 0, 0.37, 0),
+        BackgroundTransparency = 0,
+    })
     task.wait(0.06)
     CmdInput:CaptureFocus()
 end
 
 local function CloseCmd()
     CmdOpen = false
-    Tween(CmdFrame, TSI, {Position = UDim2.new(0.5,0,0.3,0)})
+    Tween(Dimmer, TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+        {BackgroundTransparency = 1})
+    Tween(CmdFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size     = UDim2.new(0, 530, 0, 46),
+        Position = UDim2.new(0.5, 0, 0.33, 0),
+        BackgroundTransparency = 0.3,
+    })
     ClearSuggs()
-    task.delay(0.32, function()
+    task.delay(0.3, function()
         CmdFrame.Visible = false
         Dimmer.Visible   = false
+        CmdFrame.Size    = UDim2.new(0, 560, 0, 52)
+        CmdFrame.BackgroundTransparency = 0
     end)
     CmdInput.Text = ""
 end
