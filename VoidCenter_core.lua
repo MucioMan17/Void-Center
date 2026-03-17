@@ -192,20 +192,6 @@ local Screen = N("ScreenGui", {
 -- STARTUP ANIMATION
 -- ═══════════════════════════════════════════════════════════
 task.spawn(function()
-    -- Full screen dark overlay
-    local overlay = N("Frame", {
-        BackgroundColor3       = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel        = 0,
-        Size                   = UDim2.new(1, 0, 1, 0),
-        ZIndex                 = 9000,
-    }, Screen)
-
-    -- Fade screen to black
-    Tween(overlay, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0})
-    task.wait(0.7)
-
     -- Black hole outer glow ring
     local bhOuter = N("Frame", {
         AnchorPoint            = Vector2.new(0.5, 0.5),
@@ -354,14 +340,8 @@ task.spawn(function()
         {Size = UDim2.new(0, 0, 0, 0)})
     task.wait(0.4)
 
-    -- Phase 7: Fade overlay out revealing the game and HUD
-    Tween(overlay, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 1})
-    task.wait(0.7)
-
     -- Clean up
     pcall(function()
-        overlay:Destroy()
         bhOuter:Destroy()
         bhMid:Destroy()
         bhCore:Destroy()
