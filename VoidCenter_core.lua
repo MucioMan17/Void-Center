@@ -35,7 +35,7 @@ local Camera = workspace.CurrentCamera
 -- ═══════════════════════════════════════════════════════════
 -- WHITELIST  ← Set your GitHub URLs here
 -- ═══════════════════════════════════════════════════════════
-local URL_PREM = ""   -- raw GitHub URL for premium user list
+local URL_PREM = "https://raw.githubusercontent.com/MucioMan17/Void-Center/refs/heads/main/prem"   -- raw GitHub URL for premium user list
 
 -- Premium user list — only these users get troll commands
 local LOCAL_PREM = {
