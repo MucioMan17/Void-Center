@@ -1333,11 +1333,53 @@ Reg("orbit", {"orb"}, "Pull nearby objects into orbit  e.g. orbit 30 | orbit off
     RefreshActive()
     Notify("Orbit", collected.." objects orbiting  |  orbit off to stop", "success", 4)
 
+    local scanTimer = 0
     orbitConn = RunService.Heartbeat:Connect(function(dt)
         if not orbitOn then return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
+
+        -- Pick up new objects every 2s as you walk around
+        scanTimer = scanTimer + dt
+        if scanTimer >= 2 then
+            scanTimer = 0
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj.Anchored then
+                    local already = false
+                    for _, d in ipairs(orbitParts) do
+                        if d.part == obj then already = true break end
+                    end
+                    if not already then
+                        local isChar = false
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p.Character and obj:IsDescendantOf(p.Character) then
+                                isChar = true break
+                            end
+                        end
+                        if not isChar then
+                            local dist = (obj.Position - center).Magnitude
+                            if dist <= radius then
+                                local bp = Instance.new("BodyPosition")
+                                bp.Name     = "VCOrbitBP"
+                                bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                                bp.Position = obj.Position
+                                bp.P        = 1e4
+                                bp.D        = 500
+                                bp.Parent   = obj
+                                table.insert(orbitParts, {
+                                    part   = obj,
+                                    angle  = math.random() * math.pi * 2,
+                                    radius = math.random(12, 16),
+                                    height = math.random(-2, 3),
+                                    speed  = math.random(80, 150) / 100,
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
 
         for i = #orbitParts, 1, -1 do
             local data = orbitParts[i]
