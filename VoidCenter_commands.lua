@@ -1267,7 +1267,6 @@ end)
 local orbitOn    = false
 local orbitParts = {}
 local orbitConn  = nil
-local ORBIT_DIST = 12
 
 local function StopOrbit()
     orbitOn = false
@@ -1284,62 +1283,49 @@ local function StopOrbit()
     Notify("Orbit", "Off", "info")
 end
 
-local function alreadyOrbiting(part)
-    for _, d in ipairs(orbitParts) do
-        if d.part == part then return true end
-    end
-    return false
-end
-
-local function tryAbsorb(obj)
-    if not obj:IsA("BasePart") or obj.Anchored then return end
-    if alreadyOrbiting(obj) then return end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character and obj:IsDescendantOf(p.Character) then return end
-    end
-    local bp = Instance.new("BodyPosition")
-    bp.Name     = "VCOrbitBP"
-    bp.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bp.Position = obj.Position
-    bp.P        = 1e4
-    bp.D        = 500
-    bp.Parent   = obj
-    table.insert(orbitParts, {
-        part   = obj,
-        angle  = math.random() * math.pi * 2,
-        radius = ORBIT_DIST + math.random(0, 4),
-        height = math.random(-2, 3),
-        speed  = math.random(80, 150) / 100,
-    })
-end
-
-Reg("orbit", {"orb"}, "Toggle orbit | orbit off to stop", false, function(a)
+Reg("orbit", {"orb"}, "Pull nearby objects into orbit  e.g. orbit 30 | orbit off", false, function(a)
     if orbitOn or (a[1] and a[1]:lower() == "off") then
         StopOrbit() return
     end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then Notify("Orbit", "No character", "error") return end
 
-    -- Immediate scan just like original working version
+    local radius    = tonumber(a[1]) or 30
     local collected = 0
+
     for _, obj in ipairs(workspace:GetDescendants()) do
-        local isChar = false
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character and obj:IsDescendantOf(p.Character) then
-                isChar = true break
+        if obj:IsA("BasePart") and not obj.Anchored then
+            local isChar = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and obj:IsDescendantOf(p.Character) then
+                    isChar = true break
+                end
             end
-        end
-        if not isChar then
-            local dist = (obj.Position - root.Position).Magnitude
-            if dist <= 40 then
-                tryAbsorb(obj)
-                collected = collected + 1
+            if not isChar then
+                local dist = (obj.Position - root.Position).Magnitude
+                if dist <= radius then
+                    local bp = Instance.new("BodyPosition")
+                    bp.Name      = "VCOrbitBP"
+                    bp.MaxForce  = Vector3.new(1e5, 1e5, 1e5)
+                    bp.Position  = obj.Position
+                    bp.P         = 1e4
+                    bp.D         = 500
+                    bp.Parent    = obj
+                    table.insert(orbitParts, {
+                        part   = obj,
+                        angle  = math.random() * math.pi * 2,
+                        radius = math.random(4, 8),
+                        height = math.random(-2, 3),
+                        speed  = math.random(80, 150) / 100,
+                    })
+                    collected = collected + 1
+                end
             end
         end
     end
 
     if collected == 0 then
-        Notify("Orbit", "No objects found nearby", "warning") return
+        Notify("Orbit", "No objects found within "..radius.." studs", "warning") return
     end
 
     orbitOn = true
@@ -1347,24 +1333,12 @@ Reg("orbit", {"orb"}, "Toggle orbit | orbit off to stop", false, function(a)
     RefreshActive()
     Notify("Orbit", collected.." objects orbiting  |  orbit off to stop", "success", 4)
 
-    local scanTimer = 0
     orbitConn = RunService.Heartbeat:Connect(function(dt)
         if not orbitOn then return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not r then return end
         local center = r.Position + Vector3.new(0, 2, 0)
 
-        -- Re-scan every 2s to pick up new objects as you walk around
-        scanTimer = scanTimer + dt
-        if scanTimer >= 2 then
-            scanTimer = 0
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                local dist = (obj.Position - center).Magnitude
-                if dist <= 40 then tryAbsorb(obj) end
-            end
-        end
-
-        -- Update orbit positions
         for i = #orbitParts, 1, -1 do
             local data = orbitParts[i]
             pcall(function()
@@ -1380,10 +1354,11 @@ Reg("orbit", {"orb"}, "Toggle orbit | orbit off to stop", false, function(a)
                     data.height,
                     math.sin(data.angle) * data.radius
                 )
-                local bp = data.part:FindFirstChild("VCOrbitBP")
-                if bp then bp.Position = target end
+                data.part:FindFirstChild("VCOrbitBP").Position = target
             end)
         end
+
+        if #orbitParts == 0 then StopOrbit() end
     end)
 end)
 -- ── INFINITE JUMP ────────────────────────────────────────────
