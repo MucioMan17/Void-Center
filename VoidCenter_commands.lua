@@ -1314,7 +1314,7 @@ Reg("orbit", {"orb"}, "Pull nearby objects into orbit  e.g. orbit 30 | orbit off
                     table.insert(orbitParts, {
                         part   = obj,
                         angle  = math.random() * math.pi * 2,
-                        radius = math.random(4, 8),
+                        radius = math.random(12, 16),
                         height = math.random(-2, 3),
                         speed  = math.random(80, 150) / 100,
                     })
